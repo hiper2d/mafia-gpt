@@ -1,0 +1,1 @@
+streamlit run server.py
