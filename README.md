@@ -4,3 +4,9 @@ The task is not trivial because popular frameworks and APIs require to define wh
 Below is an ugly design diagram of the idea. I'll improve it once I implemented the first version of the chatroom and see how it works. Currently, there are too many unknowns.
 
 ![Design](images/design.png)
+
+The stack I plan to use:
+- OpenAI API with Assistants and Threads
+- AWS Lambda to host the backend
+- React Native for the frontend
+- Redis in case I need to keep the chat history locally (in addition to the OpenAI Threads)
