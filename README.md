@@ -1,14 +1,6 @@
-# ai-chatroom-with-games
+My idea is to crete a chatroom where a human can play text-based games with multiple AI bots. Bots should not be aware of each other, then think that they everybody else a humans.
 
-In this project I experiment with ability to chat with many LLMs. My goal is to create group chats for people and multiple AIs, and play some games together.
-I use Python, LangChain and Streamlit for this. I'm going to replace Streamlit with Flask and React Native later.
+The task is not trivial because popular frameworks and APIs require to define who is writing a message (Human or AI).
+Below is an ugly design diagram of the idea. I'll improve it once I implemented the first version of the chatroom and see how it works. Currently, there are too many unknowns.
 
-## Ideas
-
-I started from multiple chat modals (ChatOpenAI). They don't have a memory, so I have to maintain the common memory for them. However, each LLM has it's personal initial prompt that is not shared to other LLMs. This should add unique personalities and hidden identities.
-
-Other ideas I'm going to explore later is using Agents with their personal memories and thinking process. This is more advanced stuff, so I'll try it once I exhaust the previous idea capabilities with a shared memory and simple LLMs.
-
-## Setup
-
-I use `pipenv` to manage dependencies. Install it and create a new virtual environment for a project. I'll provide some guidance how to setup it together with Intellij Idea/PyCharm setup for the project.
+![Design](images/design.png)
