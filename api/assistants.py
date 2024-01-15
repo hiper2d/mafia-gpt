@@ -1,5 +1,5 @@
 import time
-from prompts import ARBITER_PROMPT
+from prompts import ARBITER_PROMPT, PLAYER_PROMPT
 from typing import Optional
 
 from openai.types.beta import Assistant, Thread
@@ -72,3 +72,8 @@ class AbstractAssistant:
 class ArbiterAssistant(AbstractAssistant):
     def __init__(self, assistant_id: Optional[str] = None):
         super().__init__(assistant_name='Arbiter', assistant_id=assistant_id, prompt=ARBITER_PROMPT)
+
+
+class PlayerAssistant(AbstractAssistant):
+    def __init__(self, name: str, assistant_id: Optional[str] = None):
+        super().__init__(assistant_name=name, assistant_id=assistant_id, prompt=PLAYER_PROMPT)
