@@ -29,35 +29,18 @@ class AbstractAssistant:
             print(f"Created thread {self.thread.id}")
 
     def ask(self, user_message):
-        # Add the user message to the thread
-        self.client.beta.threads.messages.create(
-            role="user",
-            thread_id=self.thread.id,
-            content=user_message
-        )
-        # Run assistant
-        run = self.client.beta.threads.runs.create(
-            thread_id=self.thread.id,
-            assistant_id=self.assistant.id
-        )
-        print(f"Created run {run.id}")
+        self._add_user_message_to_thread(user_message)
+        run = self._create_run()
 
-        while True:
-            # Wait for 1 second
+        waiting_limit = 60
+        waiting_counter = 0
+        while True and waiting_counter < waiting_limit:
             time.sleep(1)
+            waiting_counter += 1
 
-            # Retrieve the run status
-            run_status = self.client.beta.threads.runs.retrieve(
-                thread_id=self.thread.id,
-                run_id=run.id
-            )
-            print(f"Running status: {run_status.status}, (run id: {run.id})")
-
+            run_status = self._get_run_status(run)
             if run_status.status == 'completed':
-                messages = self.client.beta.threads.messages.list(
-                    thread_id=self.thread.id,
-                    limit=1
-                )
+                messages = self._get_last_message_from_thread()
                 msg = messages.data[0]
                 role = msg.role
                 content = msg.content[0].text.value
@@ -66,7 +49,23 @@ class AbstractAssistant:
                 return content
             else:
                 print("Waiting for the Assistant to process...")
-                time.sleep(1)
+        return f"Something went wrong, got no response for {waiting_limit} seconds."
+
+    def _get_last_message_from_thread(self):
+        return self.client.beta.threads.messages.list(thread_id=self.thread.id, limit=1)
+
+    def _get_run_status(self, run):
+        run_status = self.client.beta.threads.runs.retrieve(thread_id=self.thread.id, run_id=run.id)
+        print(f"Running status: {run_status.status}, (run id: {run.id})")
+        return run_status
+
+    def _create_run(self):
+        run = self.client.beta.threads.runs.create(thread_id=self.thread.id, assistant_id=self.assistant.id)
+        print(f"Created run {run.id}")
+        return run
+
+    def _add_user_message_to_thread(self, user_message):
+        self.client.beta.threads.messages.create(role="user", thread_id=self.thread.id, content=user_message)
 
 
 class ArbiterAssistant(AbstractAssistant):

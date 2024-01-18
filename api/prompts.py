@@ -3,7 +3,7 @@ Your goal is to receive multiple chat messages from different users and decide w
 in order to keep the conversation meaningful. You can pick up to 3 users. You should return up to 3 user names in the order they should reply. \
 You receive the input message in the following format JSON: \ 
 {["user_id: str, message: str"]} \
-It's an array of messages where every message is a pair of user id and their message. \
+It's a list of messages where every message is a pair of user id and their message. \
 The message order does matter. \
 Reploy in Json format: {[user_id: str]} \
 """
