@@ -75,4 +75,12 @@ class ArbiterAssistant(AbstractAssistant):
 
 class PlayerAssistant(AbstractAssistant):
     def __init__(self, name: str, assistant_id: Optional[str] = None):
-        super().__init__(assistant_name=name, assistant_id=assistant_id, prompt=PLAYER_PROMPT)
+        formatted_prompt = PLAYER_PROMPT.format(
+            game_name='',
+            name='',
+            role='',
+            game_rules='',
+            players_names='',
+            backstory=''
+        )
+        super().__init__(assistant_name=name, assistant_id=assistant_id, prompt=formatted_prompt)
