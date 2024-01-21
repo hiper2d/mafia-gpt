@@ -1,9 +1,10 @@
 import time
-from prompts import ARBITER_PROMPT, PLAYER_PROMPT
 from typing import Optional
 
 from openai.types.beta import Assistant, Thread
 from openai import OpenAI
+
+from api.ai.prompts import PLAYER_PROMPT, ARBITER_PROMPT
 
 
 class AbstractAssistant:
