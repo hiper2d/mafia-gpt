@@ -15,27 +15,32 @@ The stack I plan to use:
 - Redis (most probably in AWS) to store the chat history and the game state
 - React Native for the frontend
 
+# The game logic
+
+The whole game logic is driven by few Python functions:
+- `init_game` - creates a new game, generates the story, bot-players, assign random roles and save this all into Redis
+- `talk_to_all` - reply tho the chat and get the game moving forward, saving the updated state back to Redis
+
+Basically, this is it. You create the game and, then send a message to `talk_to_all`, read replies, send another message and so on. The Arbiter AI should lead you and other Bot Players through the different stages of the game.
+
+Aaand... there is not a game yet, it is not coded. I've just started.
 
 # Setup
-
-Rename the [.env.template](.env.template) file into `.env` and fill in the values.
 
 ### Run Redis
 
 I prefer to run it with Docker Compose. There is a config in the root directory, just run it. You need to have docker and docker-compose installed.
-   ```bash
-   docker-compose up
-   ```
+```bash
+docker-compose up
+```
 
 ### Run Python functions
 
-The whole game logic is driven by few Python functions:
-- `init_game` - creates a new game, generates the story, bot-players, assign random roles and save this all into Redis
-- `talk_to_all` - reply tho the chat and get the game moving forward, saving the state to Redis
+Before running Python code, rename the [.env.template](.env.template) file into `.env` and fill in the values. All environmental variables from it will be loaded by functions and used to talk to the external APIs (Redis, OpenAI).
 
 I don't have any better runner than Python junit tests for now. In future, I'll use a web server with UI in React Native for the local development. I'll deploy functions to Lambdas and host UI somewhere separately.
 Each function has a separate test. It does not make sense to run all of them, only for the function you want to run.
-To run tests, install Python dependencies using `Pipenv` (more details about it is [below](#pipenv_setup)), then run a test you need.
+To run tests, install Python dependencies using `Pipenv` (more details about it is [below](#pipenv_setup)), then run a test you need like this:
    ```bash
    python -m unittest test_lambda_functions.TestGameFunctions.test_init_game
    ```
