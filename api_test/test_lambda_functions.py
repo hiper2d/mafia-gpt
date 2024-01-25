@@ -11,8 +11,7 @@ class TestGameFunctions(unittest.TestCase):
         pass
 
     def test_talk_to_all(self):
-        # Simulate inputs to the talk_to_all function
-        # and assert the expected outcomes
+        talk_to_all()
         pass
 
 

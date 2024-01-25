@@ -15,6 +15,7 @@ class AbstractAssistant:
             self.assistant: Assistant = self.client.beta.assistants.retrieve(assistant_id)
             print(f"Retrieved assistant {self.assistant.id}")
         else:
+            # todo: move Assistant creation to a separate 'static' method
             self.assistant: Assistant = self.client.beta.assistants.create(
                 name=assistant_name,
                 instructions=prompt,

@@ -1,5 +1,7 @@
 import json
+import os
 import textwrap
+import redis
 from typing import List
 
 from dotenv import load_dotenv, find_dotenv
@@ -10,6 +12,8 @@ from api.player_generator import generate_players
 
 
 def init_game():
+    load_dotenv(find_dotenv())
+
     # Here we create a game object and store it in Redis
     # To do so we need generate players with names, roles and backstories
     # Then we can initialize assistants for each player and for an arbiter
@@ -25,27 +29,36 @@ def init_game():
     )
     print("\nGame Scene:")
     print(game_scene)
+    _connect_to_redis()
 
-    # todo: generate game id and store it in Redis, make the game id the init_game argument, so the current game can be locaded
+    # todo: generate game id, save a new game object with this id to Redis
     players: List[Player] = generate_players()
     for player in players:
         print(player)
-        # todo: create an assistant for each player and store it in Redis
+        # todo: create an assistant for each player, add it to the game object
 
-    # todo:
-    # There should be a general welcome message with the game scene description
-    # Each player should generate a welcome message: introduce themselves and tell their stories
-    # Then it's time for a user to input something and start the conversation
+    # create Arbiter assistant, add it to the game object
+    # save the game object to Redis, return the game id
 
 
-def talk_to_all(user_message):
+def talk_to_all(user_message, game_id):
+    load_dotenv(find_dotenv())
+    # todo: load the game object from Redis
+
+    # todo: load Arbiter by assistant and thread ids, throw an error if not found
     arbiter = ArbiterAssistant(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')  # todo: update it since prompt has changed
     arbiter.ask(user_message)
 
 
-if __name__ == '__main__':
-    load_dotenv(find_dotenv())
+def _connect_to_redis():
+    try:
+        r = redis.Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0)
+        print("Connected to Redis: ", r.ping())
+    except ConnectionError:
+        print("Failed to connect to Redis")
 
+
+if __name__ == '__main__':
     messages = [
         {"user_id": 1, "message": "I want to eat sushi"},
         {"user_id": 2, "message": "Sushi? No, you should each taco"},
