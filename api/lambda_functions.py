@@ -26,9 +26,11 @@ def init_game():
     print("\nGame Scene:")
     print(game_scene)
 
+    # todo: generate game id and store it in Redis, make the game id the init_game argument, so the current game can be locaded
     players: List[Player] = generate_players()
     for player in players:
         print(player)
+        # todo: create an assistant for each player and store it in Redis
 
     # todo:
     # There should be a general welcome message with the game scene description
