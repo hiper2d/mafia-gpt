@@ -1,13 +1,18 @@
 import json
 import os
 import textwrap
+import uuid
+
+from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis
+from redis import Redis
+
 import redis
 from typing import List
 
 from dotenv import load_dotenv, find_dotenv
 
 from api.ai.assistants import ArbiterAssistant
-from api.models import Player
+from api.models import Player, Game
 from api.player_generator import generate_players
 
 
@@ -29,33 +34,35 @@ def init_game():
     )
     print("\nGame Scene:")
     print(game_scene)
-    _connect_to_redis()
 
-    # todo: generate game id, save a new game object with this id to Redis
+    arbiter = ArbiterAssistant.create_arbiter_from_assistant_id(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')  # todo: update it since prompt has changed
     players: List[Player] = generate_players()
     for player in players:
         print(player)
         # todo: create an assistant for each player, add it to the game object
 
-    # create Arbiter assistant, add it to the game object
-    # save the game object to Redis, return the game id
+    game = Game(
+        id=uuid.uuid4(),
+        story=game_scene,
+        players=players,
+        arbiter_assistant_id=arbiter.assistant.id,
+        arbiter_thread_id=arbiter.thread.id
+    )
+
+    r = connect_to_redis()
+    save_game_to_redis(r, game)
+    return game.id
 
 
-def talk_to_all(user_message, game_id):
+def talk_to_all(game_id: str, user_message: str):
     load_dotenv(find_dotenv())
-    # todo: load the game object from Redis
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
 
-    # todo: load Arbiter by assistant and thread ids, throw an error if not found
-    arbiter = ArbiterAssistant(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')  # todo: update it since prompt has changed
+    arbiter = ArbiterAssistant.create_arbiter_from_assistant_id_and_thread_id(
+        assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
+    )
     arbiter.ask(user_message)
-
-
-def _connect_to_redis():
-    try:
-        r = redis.Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0)
-        print("Connected to Redis: ", r.ping())
-    except ConnectionError:
-        print("Failed to connect to Redis")
 
 
 if __name__ == '__main__':

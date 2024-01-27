@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
 from openai.types.beta import Assistant, Thread
 from openai import OpenAI
@@ -8,18 +8,17 @@ from api.ai.prompts import PLAYER_PROMPT, ARBITER_PROMPT
 
 
 class AbstractAssistant:
-    def __init__(self, assistant_name: Optional[str] = None, prompt: Optional[str] = None,
-                 assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
+    def __init__(self, assistant_name: str, prompt: str, assistant_id: Optional[str] = None,
+                 thread_id: Optional[str] = None):
         self.client = OpenAI()
         if assistant_id:
             self.assistant: Assistant = self.client.beta.assistants.retrieve(assistant_id)
             print(f"Retrieved assistant {self.assistant.id}")
         else:
-            # todo: move Assistant creation to a separate 'static' method
             self.assistant: Assistant = self.client.beta.assistants.create(
                 name=assistant_name,
                 instructions=prompt,
-                model="gpt-4-1106-preview"
+                model="gpt-4-0125-preview"
             )
             print(f"Created assistant {self.assistant.id}")
 
@@ -71,8 +70,21 @@ class AbstractAssistant:
 
 
 class ArbiterAssistant(AbstractAssistant):
-    def __init__(self, assistant_id: Optional[str] = None):
-        super().__init__(assistant_name='Arbiter', assistant_id=assistant_id, prompt=ARBITER_PROMPT)
+    def __init__(self, assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
+        super().__init__(assistant_name='Arbiter', assistant_id=assistant_id, thread_id=thread_id,
+                         prompt=ARBITER_PROMPT)
+
+    @staticmethod
+    def create_arbiter() -> "ArbiterAssistant":
+        return ArbiterAssistant()
+
+    @staticmethod
+    def create_arbiter_from_assistant_id(assistant_id: str) -> "ArbiterAssistant":
+        return ArbiterAssistant(assistant_id=assistant_id)
+
+    @staticmethod
+    def create_arbiter_from_assistant_id_and_thread_id(assistant_id: str, thread_id: str) -> "ArbiterAssistant":
+        return ArbiterAssistant(assistant_id=assistant_id, thread_id=thread_id)
 
 
 class PlayerAssistant(AbstractAssistant):
