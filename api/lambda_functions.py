@@ -11,7 +11,7 @@ from typing import List
 
 from dotenv import load_dotenv, find_dotenv
 
-from api.ai.assistants import ArbiterAssistant
+from api.ai.assistants import ArbiterAssistant, PlayerAssistant
 from api.models import Player, Game
 from api.player_generator import generate_players
 
@@ -24,7 +24,7 @@ def init_game():
     # Then we can initialize assistants for each player and for an arbiter
     # We also need to generate a welcome message and create a message history Redis list
 
-    game_scene = textwrap.dedent(  # to get rid of indentation in each line
+    game_scene = textwrap.dedent(  # todo: get rid of indentation in each line
         """\
         In the heart of a bustling mid-west saloon, the air filled with the sound of piano tunes and clinking glasses,
         a diverse group of individuals finds shelter from a howling snowstorm. Each person, a stranger to the next,
@@ -35,18 +35,28 @@ def init_game():
     print("\nGame Scene:")
     print(game_scene)
 
-    arbiter = ArbiterAssistant.create_arbiter_from_assistant_id(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')  # todo: update it since prompt has changed
+    # new_arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_with_new_thread(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')
+    new_arbiter = ArbiterAssistant.create_arbiter()
     players: List[Player] = generate_players()
-    for player in players:
-        print(player)
-        # todo: create an assistant for each player, add it to the game object
+    # fixme: temporary disabled for Redis save/load testing
+    # player_names = [p.name for p in players]
+    # for player in players:
+    #     print(player)
+    #     new_player_assistant = PlayerAssistant.create_player(
+    #         name=player.name, backstory=player.backstory, role=player.role, player_names=player_names
+    #     )
+    #     player.assistant_id = new_player_assistant.assistant.id
+    #     player.thread_id = new_player_assistant.thread.id
 
     game = Game(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         story=game_scene,
         players=players,
-        arbiter_assistant_id=arbiter.assistant.id,
-        arbiter_thread_id=arbiter.thread.id
+        # fixme: temporary disabled for Redis save/load testing
+        #arbiter_assistant_id=new_arbiter.assistant.id,
+        #arbiter_thread_id=new_arbiter.thread.id
+        arbiter_assistant_id="",
+        arbiter_thread_id=""
     )
 
     r = connect_to_redis()
@@ -59,10 +69,11 @@ def talk_to_all(game_id: str, user_message: str):
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
 
-    arbiter = ArbiterAssistant.create_arbiter_from_assistant_id_and_thread_id(
-        assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
-    )
-    arbiter.ask(user_message)
+    # fixme: temporary disabled for Redis save/load testing
+    # arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_and_thread_id(
+    #     assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
+    # )
+    # arbiter.ask(user_message)
 
 
 if __name__ == '__main__':

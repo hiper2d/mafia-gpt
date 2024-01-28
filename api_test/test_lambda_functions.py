@@ -2,7 +2,7 @@
 
 import unittest
 
-from api.lambda_functions import init_game
+from api.lambda_functions import init_game, talk_to_all
 
 
 class TestGameFunctions(unittest.TestCase):
@@ -11,7 +11,7 @@ class TestGameFunctions(unittest.TestCase):
         pass
 
     def test_talk_to_all(self):
-        talk_to_all()
+        talk_to_all(user_message='', game_id='0a908031-bd88-4194-b995-3b3190c3b3f6')
         pass
 
 

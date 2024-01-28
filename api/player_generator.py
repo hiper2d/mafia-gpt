@@ -41,7 +41,9 @@ def generate_players():
             role=role,
             backstory=generate_player_backstory(),
             role_motivation=generate_role_motivation(role),
-            is_alive=True
+            is_alive=True,
+            assistant_id='',
+            thread_id=''
         )
         players.append(player)
     return players
