@@ -5,7 +5,7 @@ from openai.types.beta import Assistant, Thread
 from openai import OpenAI
 
 from api.ai.prompts import PLAYER_PROMPT, ARBITER_PROMPT
-from api.models import MafiaRole
+from api.models import MafiaRole, Player
 
 
 class AbstractAssistant:
@@ -72,21 +72,40 @@ class AbstractAssistant:
 
 
 class ArbiterAssistant(AbstractAssistant):
-    def __init__(self, assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
-        super().__init__(assistant_name='Arbiter', assistant_id=assistant_id, thread_id=thread_id,
-                         prompt=ARBITER_PROMPT)
+    def __init__(self, players: List[Player], game_story: str,
+                 assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
+        players_names_with_roles_and_stories = ""
+        for i, player in enumerate(players):
+            player_info = f"Name: {player.name}\nRole: {player.role}\nStory: {player.backstory}"
+            if i != len(players)-1:
+                player_info += "\n\n"
+            players_names_with_roles_and_stories += player_info
+
+        formatted_prompt = ARBITER_PROMPT.format(
+            game_story=game_story,
+            players_names_with_roles_and_stories=players_names_with_roles_and_stories
+        )
+        super().__init__(
+            assistant_name='Arbiter', assistant_id=assistant_id, thread_id=thread_id, prompt=formatted_prompt
+        )
 
     @staticmethod
-    def create_arbiter() -> "ArbiterAssistant":
-        return ArbiterAssistant()
+    def create_arbiter(players: List[Player], game_story: str) -> "ArbiterAssistant":
+        return ArbiterAssistant(players=players, game_story=game_story)
 
     @staticmethod
-    def load_arbiter_by_assistant_id_with_new_thread(assistant_id: str) -> "ArbiterAssistant":
-        return ArbiterAssistant(assistant_id=assistant_id)
+    def load_arbiter_by_assistant_id_with_new_thread(
+            assistant_id: str, players: List[Player], game_story: str
+    ) -> "ArbiterAssistant":
+        return ArbiterAssistant(players=players, game_story=game_story, assistant_id=assistant_id)
 
     @staticmethod
-    def load_arbiter_by_assistant_id_and_thread_id(assistant_id: str, thread_id: str) -> "ArbiterAssistant":
-        return ArbiterAssistant(assistant_id=assistant_id, thread_id=thread_id)
+    def load_arbiter_by_assistant_id_and_thread_id(
+            players: List[Player], game_story: str, assistant_id: str, thread_id: str
+    ) -> "ArbiterAssistant":
+        return ArbiterAssistant(
+            players=players, game_story=game_story, assistant_id=assistant_id, thread_id=thread_id
+        )
 
 
 class PlayerAssistant(AbstractAssistant):

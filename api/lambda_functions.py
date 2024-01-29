@@ -1,19 +1,14 @@
 import json
-import os
 import textwrap
 import uuid
-
-from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis
-from redis import Redis
-
-import redis
-from typing import List
+from typing import List, Tuple
 
 from dotenv import load_dotenv, find_dotenv
 
-from api.ai.assistants import ArbiterAssistant, PlayerAssistant
-from api.models import Player, Game
+from api.ai.assistants import ArbiterAssistant
+from api.models import Player, Game, MafiaRole
 from api.player_generator import generate_players
+from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis
 
 
 def init_game():
@@ -29,14 +24,11 @@ def init_game():
         In the heart of a bustling mid-west saloon, the air filled with the sound of piano tunes and clinking glasses,
         a diverse group of individuals finds shelter from a howling snowstorm. Each person, a stranger to the next,
         carries a story colored by the trials of the Wild West. As the fire crackles in the hearth and the storm rages on, 
-        unseen tensions and hidden tales weave a tapestry of intrigue and suspense.
-        """
+        unseen tensions and hidden tales weave a tapestry of intrigue and suspense."""
     )
     print("\nGame Scene:")
     print(game_scene)
 
-    # new_arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_with_new_thread(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')
-    new_arbiter = ArbiterAssistant.create_arbiter()
     players: List[Player] = generate_players()
     # fixme: temporary disabled for Redis save/load testing
     # player_names = [p.name for p in players]
@@ -47,6 +39,9 @@ def init_game():
     #     )
     #     player.assistant_id = new_player_assistant.assistant.id
     #     player.thread_id = new_player_assistant.thread.id
+
+    # new_arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_with_new_thread(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')
+    new_arbiter = ArbiterAssistant.create_arbiter(players=players, game_story=game_scene)
 
     game = Game(
         id=str(uuid.uuid4()),
