@@ -44,6 +44,12 @@ Below is the game backstory that sets the scene for your interactions:
 {game_story}
 [END OF GAME STORY]
 
+This is your personal backstory, which you can use to inform your character's personality and behavior: \
+
+[START OF YOUR PERSONAL STORY]
+{personal_story}
+[END OF YOUR PERSONAL STORY]
+
 Familiarize yourself with these game rules to navigate the game effectively:
 
 [START OF GAME RULES FOR MAFIA PARTY GAME]

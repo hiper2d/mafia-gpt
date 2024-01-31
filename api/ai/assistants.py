@@ -76,10 +76,9 @@ class ArbiterAssistant(AbstractAssistant):
                  assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
         players_names_with_roles_and_stories = ""
         for i, player in enumerate(players):
-            player_info = f"Name: {player.name}\nRole: {player.role}\nStory: {player.backstory}"
-            if i != len(players)-1:
-                player_info += "\n\n"
+            player_info = f"Name: {player.name}\nRole: {player.role}\nStory: {player.backstory}\n\n"
             players_names_with_roles_and_stories += player_info
+        players_names_with_roles_and_stories = players_names_with_roles_and_stories.strip()
 
         formatted_prompt = ARBITER_PROMPT.format(
             game_story=game_story,
@@ -109,35 +108,41 @@ class ArbiterAssistant(AbstractAssistant):
 
 
 class PlayerAssistant(AbstractAssistant):
-    def __init__(self, name: Optional[str], role: Optional[MafiaRole], backstory: Optional[str],
-                 player_names: List[str], assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
+    def __init__(self, player: Player, game_story: str, players_names_and_stories: str,
+                 assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
         formatted_prompt = PLAYER_PROMPT.format(
-            game_name='', # todo: remove, we focus on Mafia only for now
-            name=name,
-            role=role,
-            game_rules='', # todo: embed into the prompt
-            players_names=player_names,
-            backstory=backstory
+            name=player.name,
+            role=player.role,
+            personal_story=player.backstory,
+            role_motivation=player.role_motivation,
+            game_story=game_story,
+            players_names_and_stories=players_names_and_stories,
         )
-        super().__init__(assistant_name=name, assistant_id=assistant_id, thread_id=thread_id, prompt=formatted_prompt)
+        super().__init__(
+            assistant_name=f"Player {{player.name}}", prompt=formatted_prompt,
+            assistant_id=assistant_id, thread_id=thread_id
+        )
 
     @staticmethod
-    def create_player(name: str, backstory: str, role: MafiaRole, player_names: List[str]) -> "PlayerAssistant":
-        return PlayerAssistant(name=name, backstory=backstory, role=role, player_names=player_names)
+    def create_player(player: Player, game_story: str, players_names_and_stories: str) -> "PlayerAssistant":
+        return PlayerAssistant(
+            player=player, game_story=game_story, players_names_and_stories=players_names_and_stories
+        )
 
     @staticmethod
     def load_player_by_assistant_id_with_new_thread(
-            name: str, backstory: str, role: MafiaRole,player_names: List[str], assistant_id: str
+            player: Player, game_story: str, players_names_and_stories: str, assistant_id: str
     ) -> "PlayerAssistant":
         return PlayerAssistant(
-            name=name, backstory=backstory, role=role, player_names=player_names, assistant_id=assistant_id
+            player=player, game_story=game_story, players_names_and_stories=players_names_and_stories,
+            assistant_id=assistant_id
         )
 
     @staticmethod
     def load_player_by_assistant_id_and_thread_id(
-            name: str, backstory: str, role: MafiaRole,player_names: List[str], assistant_id: str, thread_id: str
+            player: Player, game_story: str, players_names_and_stories: str, assistant_id: str, thread_id: str
     ) -> "PlayerAssistant":
         return PlayerAssistant(
-            name=name, backstory=backstory, role=role, player_names=player_names,
+            player=player, game_story=game_story, players_names_and_stories=players_names_and_stories,
             assistant_id=assistant_id, thread_id=thread_id
         )
