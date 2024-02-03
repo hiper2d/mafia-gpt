@@ -29,7 +29,6 @@ def init_game():
     print(game_scene)
 
     all_players: List[Player] = generate_players()
-    # fixme: temporary disabled for Redis save/load testing
     for current_player in all_players:
         print(current_player)
 
@@ -44,8 +43,8 @@ def init_game():
             game_story=game_scene,
             players_names_and_stories=players_names_and_stories
         )
-        # current_player.assistant_id = new_player_assistant.assistant.id
-        # current_player.thread_id = new_player_assistant.thread.id
+        current_player.assistant_id = new_player_assistant.assistant.id
+        current_player.thread_id = new_player_assistant.thread.id
 
     # new_arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_with_new_thread(assistant_id='asst_s1xiaYU5DJXaxNrzapQMRvId')
     new_arbiter = ArbiterAssistant.create_arbiter(players=all_players, game_story=game_scene)
@@ -54,11 +53,8 @@ def init_game():
         id=str(uuid.uuid4()),
         story=game_scene,
         players=all_players,
-        # fixme: temporary disabled for Redis save/load testing
-        #arbiter_assistant_id=new_arbiter.assistant.id,
-        #arbiter_thread_id=new_arbiter.thread.id
-        arbiter_assistant_id="",
-        arbiter_thread_id=""
+        arbiter_assistant_id=new_arbiter.assistant.id,
+        arbiter_thread_id=new_arbiter.thread.id
     )
 
     r = connect_to_redis()
@@ -71,11 +67,33 @@ def talk_to_all(game_id: str, user_message: str):
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
 
-    # fixme: temporary disabled for Redis save/load testing
-    # arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_and_thread_id(
-    #     assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
-    # )
-    # arbiter.ask(user_message)
+    arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_and_thread_id(
+        assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
+    )
+    arbiter.ask(user_message)
+
+
+def delete_assistants_from_openai(game_id: str):
+    load_dotenv(find_dotenv())
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
+
+    arbiter = ArbiterAssistant.load_arbiter_by_assistant_id_and_thread_id(
+        assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id,
+        players=game.players, game_story=game.story
+    )
+    arbiter.delete()
+    for player in game.players:
+        if player.assistant_id:
+            player_assistant = PlayerAssistant.load_player_by_assistant_id_and_thread_id(
+                assistant_id=player.assistant_id, thread_id=player.thread_id,
+                # todo: get rid of unnecessary parameters below
+                player=player, game_story=game.story, players_names_and_stories=''
+
+            )
+            player_assistant.delete()
+            player.assistant_id = ''
+            player.thread_id = ''
 
 
 if __name__ == '__main__':

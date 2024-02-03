@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Optional
 
 from redis import Redis
@@ -17,6 +18,8 @@ def connect_to_redis() -> Redis:
 
 def save_game_to_redis(r: Redis, game: Game):
     game_json = game.model_dump_json()
+    timestamp = time.time()
+    r.zadd('games', {game.id: timestamp})
     r.set(game.id, game_json)
 
 
@@ -25,4 +28,5 @@ def load_game_from_redis(r: Redis, game_id: str) -> Game:
     if game_json:
         return Game.model_validate_json(game_json.decode('utf-8'))
     else:
+        print(f"Game with id {game_id} not found in Redis")
         return None
