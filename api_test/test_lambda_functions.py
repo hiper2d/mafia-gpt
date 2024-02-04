@@ -15,7 +15,7 @@ class TestGameFunctions(unittest.TestCase):
         pass
 
     def test_delete(self):
-        delete_assistants_from_openai('1ae71e30-6ac3-40e6-b8bf-7e9c6387f8d1')
+        delete_assistants_from_openai('02eea83f-f531-482a-80ad-d0014a4a41c4')  # game_id
         pass
 
 

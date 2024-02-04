@@ -8,27 +8,38 @@ from api.ai.prompts import PLAYER_PROMPT, ARBITER_PROMPT
 from api.models import MafiaRole, Player
 
 
-class AbstractAssistant:
-    def __init__(self, assistant_name: str, prompt: str, assistant_id: Optional[str] = None,
-                 thread_id: Optional[str] = None):
+class RawAssistant:
+    def __init__(self, assistant: Assistant, thread: Thread):
         self.client = OpenAI()
-        if assistant_id:
-            self.assistant: Assistant = self.client.beta.assistants.retrieve(assistant_id)
-            print(f"Retrieved assistant {self.assistant.id}")
-        else:
-            self.assistant: Assistant = self.client.beta.assistants.create(
-                name=assistant_name,
-                instructions=prompt,
-                model="gpt-4-0125-preview"
-            )
-            print(f"Created assistant {self.assistant.id}")
+        self.assistant = assistant
+        self.thread = thread
 
+    @staticmethod
+    def create_with_new_assistant(assistant_name: str, prompt: str,
+                                  model: str = "gpt-4-0125-preview") -> 'RawAssistant':
+        client = OpenAI()
+        assistant = client.beta.assistants.create(
+            name=assistant_name,
+            instructions=prompt,
+            model=model
+        )
+        print(f"Created assistant {assistant.id}")
+        thread = client.beta.threads.create()
+        print(f"Created thread {thread.id}")
+        return RawAssistant(assistant, thread)
+
+    @staticmethod
+    def create_with_existing_assistant(assistant_id: str, thread_id: Optional[str] = None) -> 'RawAssistant':
+        client = OpenAI()
+        assistant = client.beta.assistants.retrieve(assistant_id)
+        print(f"Retrieved assistant {assistant.id}")
         if thread_id:
-            self.thread: Thread = self.client.beta.threads.retrieve(thread_id)
-            print(f"Retrieved thread {self.thread.id}")
+            thread = client.beta.threads.retrieve(thread_id)
+            print(f"Retrieved thread {thread.id}")
         else:
-            self.thread: Thread = self.client.beta.threads.create()
-            print(f"Created thread {self.thread.id}")
+            thread = client.beta.threads.create()
+            print(f"Created thread {thread.id}")
+        return RawAssistant(assistant, thread)
 
     def ask(self, user_message):
         self._add_user_message_to_thread(user_message)
@@ -74,80 +85,70 @@ class AbstractAssistant:
         self.client.beta.threads.messages.create(role="user", thread_id=self.thread.id, content=user_message)
 
 
-class ArbiterAssistant(AbstractAssistant):
-    def __init__(self, players: List[Player], game_story: str,
-                 assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
+class ArbiterAssistantDecorator(RawAssistant):
+    def __init__(self, assistant: Assistant, thread: Thread):
+        super().__init__(assistant, thread)
+
+    @staticmethod
+    def create_arbiter(players: List[Player], game_story: str) -> "ArbiterAssistantDecorator":
+        formatted_prompt = ArbiterAssistantDecorator._prepare_prompt(players, game_story)
+        instance = RawAssistant.create_with_new_assistant(assistant_name='Arbiter', prompt=formatted_prompt)
+        return ArbiterAssistantDecorator(instance.assistant, instance.thread)
+
+    @staticmethod
+    def load_arbiter_by_assistant(assistant_id: str) -> "ArbiterAssistantDecorator":
+        raw_assistant = RawAssistant.create_with_existing_assistant(assistant_id=assistant_id, thread_id=None)
+        return ArbiterAssistantDecorator(raw_assistant.assistant, raw_assistant.thread)
+
+    @staticmethod
+    def load_arbiter_by_assistant_id_and_thread_id(assistant_id: str, thread_id: str) -> "ArbiterAssistantDecorator":
+        instance = RawAssistant.create_with_existing_assistant(assistant_id=assistant_id, thread_id=thread_id)
+        return ArbiterAssistantDecorator(instance.assistant, instance.thread)
+
+    @staticmethod
+    def _prepare_prompt(players: List[Player], game_story: str) -> str:
         players_names_with_roles_and_stories = ""
-        for i, player in enumerate(players):
+        for player in players:
             player_info = f"Name: {player.name}\nRole: {player.role}\nStory: {player.backstory}\n\n"
             players_names_with_roles_and_stories += player_info
         players_names_with_roles_and_stories = players_names_with_roles_and_stories.strip()
 
-        # This prompt is large, around 6k on a test data, the limit is 32k. Needs to keep this in mind
-        # Maybe extract game rule to an attached to the assistant file
-        formatted_prompt = ARBITER_PROMPT.format(
+        return ARBITER_PROMPT.format(
             game_story=game_story,
             players_names_with_roles_and_stories=players_names_with_roles_and_stories
         )
-        super().__init__(
-            assistant_name='Arbiter', assistant_id=assistant_id, thread_id=thread_id, prompt=formatted_prompt
+
+
+class PlayerAssistantDecorator(RawAssistant):
+    def __init__(self, assistant: Assistant, thread: Thread):
+        super().__init__(assistant, thread)
+
+    @classmethod
+    def create_player(cls, player: Player, game_story: str,
+                      players_names_and_stories: str) -> "PlayerAssistantDecorator":
+        formatted_prompt = cls._prepare_prompt(player, game_story, players_names_and_stories)
+        raw_assistant = cls.create_with_new_assistant(
+            assistant_name=f"Player {player.name}", prompt=formatted_prompt
         )
+        return cls(raw_assistant.assistant, raw_assistant.thread)
+
+    @classmethod
+    def load_player_by_assistant_id_with_new_thread(cls, assistant_id: str) -> "PlayerAssistantDecorator":
+        raw_assistant = cls.create_with_existing_assistant(assistant_id=assistant_id)
+        return cls(raw_assistant.assistant, raw_assistant.thread)
+
+    @classmethod
+    def load_player_by_assistant_id_and_thread_id(cls, assistant_id: str, thread_id: str) -> "PlayerAssistantDecorator":
+        raw_assistant = cls.create_with_existing_assistant(assistant_id=assistant_id, thread_id=thread_id)
+        return cls(raw_assistant.assistant, raw_assistant.thread)
 
     @staticmethod
-    def create_arbiter(players: List[Player], game_story: str) -> "ArbiterAssistant":
-        return ArbiterAssistant(players=players, game_story=game_story)
-
-    @staticmethod
-    def load_arbiter_by_assistant_id_with_new_thread(
-            assistant_id: str, players: List[Player], game_story: str
-    ) -> "ArbiterAssistant":
-        return ArbiterAssistant(players=players, game_story=game_story, assistant_id=assistant_id)
-
-    @staticmethod
-    def load_arbiter_by_assistant_id_and_thread_id(
-            players: List[Player], game_story: str, assistant_id: str, thread_id: str
-    ) -> "ArbiterAssistant":
-        return ArbiterAssistant(
-            players=players, game_story=game_story, assistant_id=assistant_id, thread_id=thread_id
-        )
-
-
-class PlayerAssistant(AbstractAssistant):
-    def __init__(self, player: Player, game_story: str, players_names_and_stories: str,
-                 assistant_id: Optional[str] = None, thread_id: Optional[str] = None):
-        formatted_prompt = PLAYER_PROMPT.format(
+    def _prepare_prompt(player: Player, game_story: str, players_names_and_stories: str) -> str:
+        return PLAYER_PROMPT.format(
             name=player.name,
             role=player.role,
             personal_story=player.backstory,
             role_motivation=player.role_motivation,
             game_story=game_story,
             players_names_and_stories=players_names_and_stories,
-        )
-        super().__init__(
-            assistant_name=f"Player {player.name}", prompt=formatted_prompt,
-            assistant_id=assistant_id, thread_id=thread_id
-        )
-
-    @staticmethod
-    def create_player(player: Player, game_story: str, players_names_and_stories: str) -> "PlayerAssistant":
-        return PlayerAssistant(
-            player=player, game_story=game_story, players_names_and_stories=players_names_and_stories
-        )
-
-    @staticmethod
-    def load_player_by_assistant_id_with_new_thread(
-            player: Player, game_story: str, players_names_and_stories: str, assistant_id: str
-    ) -> "PlayerAssistant":
-        return PlayerAssistant(
-            player=player, game_story=game_story, players_names_and_stories=players_names_and_stories,
-            assistant_id=assistant_id
-        )
-
-    @staticmethod
-    def load_player_by_assistant_id_and_thread_id(
-            player: Player, game_story: str, players_names_and_stories: str, assistant_id: str, thread_id: str
-    ) -> "PlayerAssistant":
-        return PlayerAssistant(
-            player=player, game_story=game_story, players_names_and_stories=players_names_and_stories,
-            assistant_id=assistant_id, thread_id=thread_id
         )
