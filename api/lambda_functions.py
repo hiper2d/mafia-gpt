@@ -1,14 +1,15 @@
-import json
+import concurrent.futures
 import textwrap
 import uuid
-from typing import List, Tuple
+from typing import List
 
 from dotenv import load_dotenv, find_dotenv
 
 from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator
-from api.models import Player, Game, MafiaRole
+from api.models import Player, Game
 from api.player_generator import generate_players
-from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis
+from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
+    add_player_message_to_redis_list, delete_redis_game_history_list
 
 
 def init_game():
@@ -54,6 +55,55 @@ def init_game():
     r = connect_to_redis()
     save_game_to_redis(r, game)
     return game.id
+
+
+# Sequential execution is super slow
+def get_welcome_messages_from_all_players(game_id: str):
+    load_dotenv(find_dotenv())
+
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
+    if not game or not game.players:
+        print(f"Game with id {game_id} not found in Redis")
+        return
+
+    all_introductions = []
+    for player in game.players:
+        player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
+            assistant_id=player.assistant_id, old_thread_id=player.thread_id
+        )
+        answer = player_assistant.ask("Please introduce yourself to the other players.")
+        all_introductions.append(f"{player.name}: {answer}")
+    delete_redis_game_history_list(r, game_id)
+    add_player_message_to_redis_list(r, game_id, all_introductions)
+    return all_introductions
+
+
+# This function for local testing only. When deployed to AWS Lambda, it should call other lambdas for each player
+# rather than using threads
+def get_welcome_messages_from_all_players_async(game_id: str):
+    load_dotenv(find_dotenv())
+
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
+    if not game or not game.players:
+        print(f"Game with id {game_id} not found in Redis")
+        return
+
+    def get_player_introduction(player):
+        player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
+            assistant_id=player.assistant_id, old_thread_id=player.thread_id
+        )
+        answer = player_assistant.ask("Please introduce yourself to the other players.")
+        return f"{player.name}: {answer}"
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_player_introduction, player) for player in game.players]
+        all_introductions = [future.result() for future in concurrent.futures.as_completed(futures)]
+
+    delete_redis_game_history_list(r, game_id)
+    add_player_message_to_redis_list(r, game_id, all_introductions)
+    return all_introductions
 
 
 def talk_to_all(game_id: str, user_message: str):

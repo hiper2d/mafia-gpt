@@ -2,7 +2,11 @@
 
 import unittest
 
-from api.lambda_functions import init_game, talk_to_all, delete_assistants_from_openai
+from api.lambda_functions import init_game, delete_assistants_from_openai, \
+    get_welcome_messages_from_all_players_async, talk_to_all
+
+
+CURRENT_GAME_ID = '02eea83f-f531-482a-80ad-d0014a4a41c4'
 
 
 class TestGameFunctions(unittest.TestCase):
@@ -10,12 +14,16 @@ class TestGameFunctions(unittest.TestCase):
         init_game()
         pass
 
+    def test_get_welcome_messages_from_all_players(self):
+        get_welcome_messages_from_all_players_async(game_id=CURRENT_GAME_ID)
+        pass
+
     def test_talk_to_all(self):
-        talk_to_all(user_message='', game_id='0a908031-bd88-4194-b995-3b3190c3b3f6')
+        talk_to_all(user_message='', game_id=CURRENT_GAME_ID)
         pass
 
     def test_delete(self):
-        delete_assistants_from_openai('02eea83f-f531-482a-80ad-d0014a4a41c4')  # game_id
+        delete_assistants_from_openai(CURRENT_GAME_ID)
         pass
 
 

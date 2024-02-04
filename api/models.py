@@ -35,6 +35,7 @@ class Game(BaseModel):
     arbiter_assistant_id: str
     arbiter_thread_id: str
     players: list[Player]
+    current_messages_offset: int = 0
     is_active: bool = True
 
     def __repr__(self):

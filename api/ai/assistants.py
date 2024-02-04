@@ -29,19 +29,23 @@ class RawAssistant:
         return RawAssistant(assistant, thread)
 
     @staticmethod
-    def create_with_existing_assistant(assistant_id: str, thread_id: Optional[str] = None) -> 'RawAssistant':
+    def create_with_existing_assistant(assistant_id: str, new_thread_id: Optional[str] = None,
+                                       old_thread_id: Optional[str] = None) -> 'RawAssistant':
         client = OpenAI()
         assistant = client.beta.assistants.retrieve(assistant_id)
         print(f"Retrieved assistant {assistant.id}")
-        if thread_id:
-            thread = client.beta.threads.retrieve(thread_id)
-            print(f"Retrieved thread {thread.id}")
+        if new_thread_id:
+            thread = client.beta.threads.retrieve(new_thread_id)
+            print(f"Retrieved thread {thread.id} from assistant {assistant.id}")
+            if old_thread_id:
+                client.beta.threads.delete(thread_id=old_thread_id)
+                print(f"Deleted thread {old_thread_id} from assistant {assistant.id}")
         else:
             thread = client.beta.threads.create()
-            print(f"Created thread {thread.id}")
+            print(f"Created thread {thread.id} for assistant {assistant.id}")
         return RawAssistant(assistant, thread)
 
-    def ask(self, user_message):
+    def ask(self, user_message) -> str:
         self._add_user_message_to_thread(user_message)
         run = self._create_run()
 
@@ -57,11 +61,11 @@ class RawAssistant:
                 msg = messages.data[0]
                 role = msg.role
                 content = msg.content[0].text.value
-                print(f"Got reply from {role.capitalize()}:")
+                print(f"Got reply from {role.capitalize()} Assistant ({self.assistant.id}):")
                 print(f"{content}")
                 return content
             else:
-                print("Waiting for the Assistant to process...")
+                print(f"Waiting for the Assistant ({self.assistant.id}) to process...")
         return f"Something went wrong, got no response for {waiting_limit} seconds."
 
     def delete(self):
@@ -97,12 +101,12 @@ class ArbiterAssistantDecorator(RawAssistant):
 
     @staticmethod
     def load_arbiter_by_assistant(assistant_id: str) -> "ArbiterAssistantDecorator":
-        raw_assistant = RawAssistant.create_with_existing_assistant(assistant_id=assistant_id, thread_id=None)
+        raw_assistant = RawAssistant.create_with_existing_assistant(assistant_id=assistant_id)
         return ArbiterAssistantDecorator(raw_assistant.assistant, raw_assistant.thread)
 
     @staticmethod
     def load_arbiter_by_assistant_id_and_thread_id(assistant_id: str, thread_id: str) -> "ArbiterAssistantDecorator":
-        instance = RawAssistant.create_with_existing_assistant(assistant_id=assistant_id, thread_id=thread_id)
+        instance = RawAssistant.create_with_existing_assistant(assistant_id=assistant_id, new_thread_id=thread_id)
         return ArbiterAssistantDecorator(instance.assistant, instance.thread)
 
     @staticmethod
@@ -133,13 +137,14 @@ class PlayerAssistantDecorator(RawAssistant):
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
     @classmethod
-    def load_player_by_assistant_id_with_new_thread(cls, assistant_id: str) -> "PlayerAssistantDecorator":
-        raw_assistant = cls.create_with_existing_assistant(assistant_id=assistant_id)
+    def load_player_by_assistant_id_with_new_thread(
+            cls, assistant_id: str, old_thread_id: Optional[str] = None) -> "PlayerAssistantDecorator":
+        raw_assistant = cls.create_with_existing_assistant(assistant_id=assistant_id, old_thread_id=old_thread_id)
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
     @classmethod
     def load_player_by_assistant_id_and_thread_id(cls, assistant_id: str, thread_id: str) -> "PlayerAssistantDecorator":
-        raw_assistant = cls.create_with_existing_assistant(assistant_id=assistant_id, thread_id=thread_id)
+        raw_assistant = cls.create_with_existing_assistant(assistant_id=assistant_id, new_thread_id=thread_id)
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
     @staticmethod

@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional
+from typing import Optional, List
 
 from redis import Redis
 
@@ -42,3 +42,33 @@ def load_game_from_redis(r: Redis, game_id: str) -> Optional[Game]:
     else:
         print(f"Game with id {game_id} not found in Redis")
         return None
+
+
+def add_player_message_to_redis_list(r: Redis, game_id: str, messages: List[str]):
+    if messages:
+        pushed = r.rpush(f"{game_id}:history", *messages)
+        if pushed:
+            print(f"{len(messages)} messages added to game {game_id}")
+        else:
+            print("Failed to add messages to game {game_id}")
+    else:
+        print("No messages to add.")
+
+
+def delete_redis_game_history_list(r: Redis, game_id: str):
+    list_key = f"{game_id}:history"
+    result = r.delete(list_key)
+    if result:
+        print(f"List {list_key} deleted successfully.")
+    else:
+        print(f"List {list_key} does not exist or could not be deleted.")
+
+
+def read_messages_from_redis(r: Redis, game_id: str, start_line_number: int) -> List[str]:
+    if not r.exists(f"{game_id}:history"):
+        print(f"No list found for game ID {game_id}")
+        return []
+
+    messages = r.lrange(f"{game_id}:history", start_line_number, -1)
+    decoded_messages = [message.decode('utf-8') for message in messages]
+    return decoded_messages
