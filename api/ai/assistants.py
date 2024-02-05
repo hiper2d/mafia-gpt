@@ -1,11 +1,11 @@
 import time
-from typing import Optional, Tuple, List
+from typing import Optional, List
 
-from openai.types.beta import Assistant, Thread
 from openai import OpenAI
+from openai.types.beta import Assistant, Thread
 
 from api.ai.prompts import PLAYER_PROMPT, ARBITER_PROMPT
-from api.models import MafiaRole, Player
+from api.models import Player
 
 
 class RawAssistant:

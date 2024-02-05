@@ -114,6 +114,9 @@ def talk_to_all(game_id: str, user_message: str):
     arbiter = ArbiterAssistantDecorator.load_arbiter_by_assistant_id_and_thread_id(
         assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
     )
+    # todo: save the user message to Redis List History
+    # add_player_message_to_redis_list(r, game_id, f"Alex: {user_message}")
+    # todo: add messages from Redis List from the offset to the end
     arbiter.ask(user_message)
 
 

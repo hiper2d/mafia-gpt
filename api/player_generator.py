@@ -54,5 +54,7 @@ def generate_players():
             thread_id=''
         )
         players.append(player)
+    # todo: add current human player
     return players
+
 

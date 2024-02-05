@@ -19,7 +19,7 @@ class TestGameFunctions(unittest.TestCase):
         pass
 
     def test_talk_to_all(self):
-        talk_to_all(user_message='', game_id=CURRENT_GAME_ID)
+        talk_to_all(user_message="Hi folks, my name is Bob. I'm just a traveler.", game_id=CURRENT_GAME_ID)
         pass
 
     def test_delete(self):
