@@ -44,7 +44,7 @@ def load_game_from_redis(r: Redis, game_id: str) -> Optional[Game]:
         return None
 
 
-def add_player_message_to_redis_list(r: Redis, game_id: str, messages: List[str]):
+def add_player_messages_to_redis_list(r: Redis, game_id: str, messages: List[str]):
     if messages:
         pushed = r.rpush(f"{game_id}:history", *messages)
         if pushed:

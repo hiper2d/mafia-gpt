@@ -1,15 +1,16 @@
 import concurrent.futures
+import json
 import textwrap
 import uuid
 from typing import List
 
 from dotenv import load_dotenv, find_dotenv
 
-from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator
-from api.models import Player, Game
+from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator, RawAssistant
+from api.models import Player, Game, ArbiterReply
 from api.player_generator import generate_players
 from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
-    add_player_message_to_redis_list, delete_redis_game_history_list
+    add_player_messages_to_redis_list, delete_redis_game_history_list, read_messages_from_redis
 
 
 def init_game():
@@ -75,7 +76,7 @@ def get_welcome_messages_from_all_players(game_id: str):
         answer = player_assistant.ask("Please introduce yourself to the other players.")
         all_introductions.append(f"{player.name}: {answer}")
     delete_redis_game_history_list(r, game_id)
-    add_player_message_to_redis_list(r, game_id, all_introductions)
+    add_player_messages_to_redis_list(r, game_id, all_introductions)
     return all_introductions
 
 
@@ -102,7 +103,7 @@ def get_welcome_messages_from_all_players_async(game_id: str):
         all_introductions = [future.result() for future in concurrent.futures.as_completed(futures)]
 
     delete_redis_game_history_list(r, game_id)
-    add_player_message_to_redis_list(r, game_id, all_introductions)
+    add_player_messages_to_redis_list(r, game_id, all_introductions)
     return all_introductions
 
 
@@ -114,10 +115,32 @@ def talk_to_all(game_id: str, user_message: str):
     arbiter = ArbiterAssistantDecorator.load_arbiter_by_assistant_id_and_thread_id(
         assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
     )
-    # todo: save the user message to Redis List History
-    # add_player_message_to_redis_list(r, game_id, f"Alex: {user_message}")
-    # todo: add messages from Redis List from the offset to the end
-    arbiter.ask(user_message)
+    add_player_messages_to_redis_list(r, game_id, ['User: ' + user_message])  # todo: create some object for the player in the init_game
+    last_few_messages: List[str] = read_messages_from_redis(r, game_id, game.current_messages_offset)
+    game.current_messages_offset += len(last_few_messages)
+
+    last_few_messages_str = '\n'.join(last_few_messages)
+    arbiter_reply = arbiter.ask(last_few_messages_str)
+    arbiter_reply_json = json.loads(arbiter_reply)
+    reply_obj: ArbiterReply = ArbiterReply(replies=arbiter_reply_json['replies'])
+
+    new_messages = [user_message]
+    for name in reply_obj.replies:
+        for player in game.players:  # todo: change players in the Game from list to map
+            if name == player.name:
+                new_messages_str = '\n'.join(new_messages)  # todo: load messages from player.offset from Redis
+                message = f"Reply to these few messages from other players:\n{new_messages_str}"
+                player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
+                    assistant_id=player.assistant_id, thread_id=player.thread_id
+                )
+                player_reply = player_assistant.ask(message)
+                # todo: save player reply to Redis
+                # todo: update player's offset to the latest
+                new_message = f"{player.name}: {player_reply}"
+                new_messages.append(new_message)
+                break
+    add_player_messages_to_redis_list(r, game_id, new_messages)
+    save_game_to_redis(r, game)
 
 
 def delete_assistants_from_openai(game_id: str):
@@ -137,3 +160,9 @@ def delete_assistants_from_openai(game_id: str):
             player_assistant.delete()
             player.assistant_id = ''
             player.thread_id = ''
+
+
+def delete_assistants_from_openai_by_name(name: str):
+    load_dotenv(find_dotenv())
+    RawAssistant.delete_all_by_name(name=name)
+

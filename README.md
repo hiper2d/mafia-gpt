@@ -41,7 +41,8 @@ humans and to hide their true identity.
 
 ### get_welcome_messages_from_all_players
 
-Asks each bot player to generate a welcome message. Return all messages in a list.
+Asks each bot player to generate a welcome message. Return all messages in a list. I plan to merge it into
+the `init_game` function.
 
 ### talk_to_all
 

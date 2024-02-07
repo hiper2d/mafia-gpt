@@ -22,11 +22,7 @@ class Player(BaseModel):
     backstory: str
     role_motivation: str
     is_alive: bool = True
-
-    def __repr__(self):
-        return (f"Player(name={self.name!r}, role={self.role.value!r}, "
-                f"backstory={self.backstory!r}, role_motivation={self.role_motivation!r}, "
-                f"is_alive={self.is_alive!r})")
+    current_offset: int = 1  # 1 message is reserved for the welcome message
 
 
 class Game(BaseModel):
@@ -38,7 +34,6 @@ class Game(BaseModel):
     current_messages_offset: int = 0
     is_active: bool = True
 
-    def __repr__(self):
-        return (f"Game(name={self.name!r}, players={self.players!r}, "
-                f"is_active={self.is_active!r})")
 
+class ArbiterReply(BaseModel):
+    replies: list[str]

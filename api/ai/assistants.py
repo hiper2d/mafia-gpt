@@ -45,7 +45,16 @@ class RawAssistant:
             print(f"Created thread {thread.id} for assistant {assistant.id}")
         return RawAssistant(assistant, thread)
 
-    def ask(self, user_message) -> str:
+    @staticmethod
+    def delete_all_by_name(name: str):
+        client = OpenAI()
+        all_assistants = client.beta.assistants.list(limit=100)
+        for assistant in all_assistants.data:
+            if assistant.name == name:
+                client.beta.assistants.delete(assistant_id=assistant.id)
+                print(f"Deleted assistant {assistant.id}")
+
+    def ask(self, user_message: str) -> str:
         self._add_user_message_to_thread(user_message)
         run = self._create_run()
 
@@ -70,22 +79,23 @@ class RawAssistant:
 
     def delete(self):
         self.client.beta.assistants.delete(assistant_id=self.assistant.id)
-        print(f"Deleted assistant {self.assistant.id}")
+        print(f"{self.assistant.name} action: Deleted assistant {self.assistant.id}")
 
     def _get_last_message_from_thread(self):
         return self.client.beta.threads.messages.list(thread_id=self.thread.id, limit=1)
 
     def _get_run_status(self, run):
         run_status = self.client.beta.threads.runs.retrieve(thread_id=self.thread.id, run_id=run.id)
-        print(f"Running status: {run_status.status}, (run id: {run.id})")
+        print(f"{self.assistant.name} action: Running status: {run_status.status}, (run id: {run.id})")
         return run_status
 
     def _create_run(self):
         run = self.client.beta.threads.runs.create(thread_id=self.thread.id, assistant_id=self.assistant.id)
-        print(f"Created run {run.id}")
+        print(f"{self.assistant.name} action: Created run {run.id}")
         return run
 
     def _add_user_message_to_thread(self, user_message):
+        print(f"{self.assistant.name} action: Adding user message to thread {self.thread.id}: {user_message}")
         self.client.beta.threads.messages.create(role="user", thread_id=self.thread.id, content=user_message)
 
 
