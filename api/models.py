@@ -23,6 +23,7 @@ class Player(BaseModel):
     role_motivation: str
     is_alive: bool = True
     current_offset: int = 1  # 1 message is reserved for the welcome message
+    # fixme: init current_offset to 0 and increase on welcome message
 
 
 class Game(BaseModel):
@@ -30,8 +31,8 @@ class Game(BaseModel):
     story: str
     arbiter_assistant_id: str
     arbiter_thread_id: str
-    players: list[Player]
-    current_messages_offset: int = 0
+    players: dict[str, Player]
+    current_messages_offset: int = 0  # todo: rename to current_offset
     is_active: bool = True
 
 

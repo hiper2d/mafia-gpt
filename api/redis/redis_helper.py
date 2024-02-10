@@ -35,6 +35,20 @@ def save_game_to_redis(r: Redis, game: Game):
         print(f"Failed to save game data for ID {game.id}")
 
 
+def delete_game_from_redis(r: Redis, game: Game):
+    deleted = r.delete(game.id)
+    if deleted:
+        print(f"Game ID {game.id} deleted successfully from Redis")
+    else:
+        print(f"Failed to delete game ID {game.id} from Redis")
+
+    removed_from_zset = r.zrem('games', game.id)
+    if removed_from_zset:
+        print(f"Game ID {game.id} removed from sorted set successfully")
+    else:
+        print(f"Failed to remove game ID {game.id} from sorted set")
+
+
 def load_game_from_redis(r: Redis, game_id: str) -> Optional[Game]:
     game_json = r.get(game_id)
     if game_json:

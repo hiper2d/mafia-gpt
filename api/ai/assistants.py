@@ -68,10 +68,9 @@ class RawAssistant:
             if run_status.status == 'completed':
                 messages = self._get_last_message_from_thread()
                 msg = messages.data[0]
-                role = msg.role
                 content = msg.content[0].text.value
-                print(f"Got reply from {role.capitalize()} Assistant ({self.assistant.id}):")
-                print(f"{content}")
+                print(f"Got reply from {self.assistant.name}  (id: {self.assistant.id}):")
+                print(f"{content}\n")
                 return content
             else:
                 print(f"Waiting for the Assistant ({self.assistant.id}) to process...")

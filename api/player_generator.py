@@ -1,4 +1,5 @@
 import random
+from typing import Dict
 
 from api.models import Player, MafiaRole
 
@@ -37,7 +38,7 @@ def generate_western_name(available_names):
 
 def generate_players():
     player_roles = [MafiaRole.MAFIA, MafiaRole.DOCTOR, MafiaRole.VILLAGER, MafiaRole.VILLAGER, MafiaRole.VILLAGER]
-    players = []
+    players: Dict[str, Player] = {}
     available_names = names[:]
     available_backstories = backstories[:]
 
@@ -53,7 +54,7 @@ def generate_players():
             assistant_id='',
             thread_id=''
         )
-        players.append(player)
+        players[player.name] = player
     # todo: add current human player
     return players
 
