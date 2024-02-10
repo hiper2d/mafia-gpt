@@ -31,7 +31,7 @@ class Game(BaseModel):
     story: str
     arbiter_assistant_id: str
     arbiter_thread_id: str
-    players: dict[str, Player]
+    players: dict[str, Player] # todo: rename to bot_players and add human_player
     current_messages_offset: int = 0  # todo: rename to current_offset
     is_active: bool = True
 

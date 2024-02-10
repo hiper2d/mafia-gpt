@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from redis import Redis
 
@@ -58,7 +58,7 @@ def load_game_from_redis(r: Redis, game_id: str) -> Optional[Game]:
         return None
 
 
-def add_player_messages_to_redis_list(r: Redis, game_id: str, messages: List[str]):
+def add_message_to_game_history_redis_list(r: Redis, game_id: str, messages: List[str]):
     if messages:
         pushed = r.rpush(f"{game_id}:history", *messages)
         if pushed:
@@ -69,7 +69,7 @@ def add_player_messages_to_redis_list(r: Redis, game_id: str, messages: List[str
         print("No messages to add.")
 
 
-def delete_redis_game_history_list(r: Redis, game_id: str):
+def delete_game_history_redis_list(r: Redis, game_id: str):
     list_key = f"{game_id}:history"
     result = r.delete(list_key)
     if result:
@@ -78,11 +78,15 @@ def delete_redis_game_history_list(r: Redis, game_id: str):
         print(f"List {list_key} does not exist or could not be deleted.")
 
 
-def read_messages_from_redis(r: Redis, game_id: str, start_line_number: int) -> List[str]:
+def read_messages_from_game_history_redis_list(r: Redis, game_id: str, read_from_line: int) -> Tuple[List[str], int]:
     if not r.exists(f"{game_id}:history"):
         print(f"No list found for game ID {game_id}")
-        return []
+        return [], -1
 
-    messages = r.lrange(f"{game_id}:history", start_line_number, -1)
+    messages = r.lrange(f"{game_id}:history", read_from_line, -1)
     decoded_messages = [message.decode('utf-8') for message in messages]
-    return decoded_messages
+
+    # Get the total length of the list to find the index of the latest record
+    total_length = r.llen(f"{game_id}:history")
+    latest_index = total_length - 1  # Subtracting 1 because list indices start at 0
+    return decoded_messages, latest_index
