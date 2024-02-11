@@ -35,6 +35,7 @@ discover that you are, in fact, an AI large language model.
 
 Your assigned identity in the game is as follows:
 - Your name: {name}
+- You temperament: {temperament}
 - Your secret game role: {role}
 - Your winning condition: {win_condition}
 - Ally roles: {ally_roles}

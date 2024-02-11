@@ -1,7 +1,7 @@
 import random
 from typing import Dict
 
-from api.models import Player, MafiaRole
+from api.models import Player, MafiaRole, Temperament
 
 backstories = [
     "Hailing from a distant town, this individual came to the saloon seeking refuge and perhaps a new start, leaving a mysterious past behind.",
@@ -36,6 +36,11 @@ def generate_western_name(available_names):
     return name
 
 
+def generate_random_temperament():
+    return random.choice(list(Temperament))
+
+
+# todo: update this to the 6-10 player game
 def generate_players():
     player_roles = [MafiaRole.MAFIA, MafiaRole.DOCTOR, MafiaRole.VILLAGER, MafiaRole.VILLAGER, MafiaRole.VILLAGER]
     players: Dict[str, Player] = {}
@@ -50,6 +55,7 @@ def generate_players():
             role=role,
             backstory=generate_player_backstory(available_backstories),
             role_motivation=generate_role_motivation(role),
+            temperament=generate_random_temperament(),
             is_alive=True,
             assistant_id='',
             thread_id=''
