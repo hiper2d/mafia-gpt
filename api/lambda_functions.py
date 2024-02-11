@@ -184,7 +184,7 @@ def talk_to_all(game_id: str, user_message: str):
     save_game_to_redis(r, game)
 
 
-def run_cycle_of_vote(game_id: str):
+def start_elimination_vote(game_id: str):
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
