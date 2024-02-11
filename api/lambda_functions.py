@@ -32,7 +32,7 @@ def _setup_logger(log_level=logging.DEBUG):
 
     # Create formatter and add it to the handlers
     console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%H:%M')
+    file_formatter = logging.Formatter('[%(asctime)s] %(message)s', datefmt='%H:%M:%S')
     console_handler.setFormatter(console_formatter)
     file_handler.setFormatter(file_formatter)
 
@@ -45,7 +45,7 @@ def _setup_logger(log_level=logging.DEBUG):
 logger = _setup_logger(log_level=logging.DEBUG)
 
 
-def init_game(reply_language_instruction: str):
+def init_game(reply_language_instruction: str = ''):
     load_dotenv(find_dotenv())
 
     game_scene = textwrap.dedent(
@@ -116,7 +116,7 @@ def get_welcome_messages_from_all_players(game_id: str):
         all_introductions.append(f"{player.name}: {answer}")
 
     add_message_to_game_history_redis_list(r, game_id, all_introductions)
-    logger.info("\nDay 1 begins!\n")
+    logger.info("*** Day 1 begins! ***")
     return all_introductions
 
 
@@ -144,7 +144,7 @@ def get_welcome_messages_from_all_players_async(game_id: str):
         all_introductions = [future.result() for future in concurrent.futures.as_completed(futures)]
 
     add_message_to_game_history_redis_list(r, game_id, all_introductions)
-    logger.info("\nDay 1 begins!\n")
+    logger.info("*** Day 1 begins! ***")
     return all_introductions
 
 
@@ -167,9 +167,9 @@ def talk_to_all(game_id: str, user_message: str):
     game.user_moves_total_counter += 1
     game.user_moves_day_counter += 1
     arbiter_reply_json = json.loads(arbiter_reply)
-    reply_obj: ArbiterReply = ArbiterReply(replies=arbiter_reply_json['replies'])
+    reply_obj: ArbiterReply = ArbiterReply(replies=arbiter_reply_json['players_to_reply'])
 
-    for name in reply_obj.replies:
+    for name in reply_obj.players_to_reply:
         player = game.players[name]
         new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(r, game_id, player.current_offset + 1)
         new_messaged_for_player_concatenated = '\n'.join(new_messaged_for_player)

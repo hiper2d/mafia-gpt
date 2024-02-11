@@ -45,4 +45,4 @@ class Game(BaseModel):
 
 
 class ArbiterReply(BaseModel):
-    replies: list[str]
+    players_to_reply: list[str]

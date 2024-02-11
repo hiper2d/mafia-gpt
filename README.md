@@ -1,8 +1,44 @@
 # Mafia with AI
 
-I'm building the [Mafia party-game](https://en.wikipedia.org/wiki/Mafia_(party_game)) with AI bots.
+I'm building the [Mafia party-game](https://en.wikipedia.org/wiki/Mafia_(party_game)) with AI bots. There is no UI yet, it's a console version. It looks like this:
 
-Bots are not aware of each other. Each of them gets instructions to pretend to be a human and to hide their true
+> ##### **** Day 1 begins! ****
+>
+> **[20:19:10] User**: Hey there, I'm Bob. I heard there is a Mafia among us. I think it's Mabel, I so whe tried to hind a gun under the table!
+>
+> **[20:20:07] Arbiter**: {"players_to_reply": ["Mabel", "Eleanor", "Emmett"]}
+>
+> **[20:20:20] Mabel**: Ah, greetings to you all! I'm Mabel, just another traveler on life's winding roads, always eager for a good yarn by the fireside. Emmett, your perspective fascinates me. There's indeed much to be learned from observing the plays of light and shadow, as you've put it. A keen observer can often see beyond the facade people hold up to the world. Lottie, your words resonate with me deeply. Life does love to test us with its storms, doesn't it? But it's in these very storms that we find our strength and, sometimes, a fresh start. And Eleanor, ah, a fellow storyteller! There's nothing like a good tale to warm the spirits. I believe every person, every situation holds a story waiting to be told, a mystery waiting to be unraveled.
+>
+> As for you, Bob, I must say, your accusation has quite the flavor of intrigue! But alas, if I were trying to conceal a weapon, I daresay I'd choose a less conspicuous method than under a table in such a convivial setting. My travels have taught me the value of peace and the importance of vigilance, but they've also instilled in me a profound respect for the sanctity of life and the pursuit of harmony. A gun, my dear Bob, is a tool I'd rather leave to the likes of old tales and legends. My weapons are my words, my observations, and the hope that, together, we can unravel any mystery, including this curious suspicion of Mafia amidst us. How about we all focus on sharing our stories and watching out for one another? After all, a united front is our best defense against any hidden threats, don't you think?
+>
+> **[20:20:34] Eleanor**: Ah, Mabel, your words do strike a chord - the art of deflection and painting oneself in the light of peace and harmony, all while navigating the accusations with the grace of a well-versed traveler. It's an intriguing stance, indeed. But Bob, you've certainly stirred the pot with your accusation, haven't you? Bringing a suspicion of Mafia into this cozy gathering adds a certain... spice to our interactions. While Mabel defends her innocence with eloquence, it's a reminder to us all that beneath the surface of camaraderie and shared tales, there might lurk deeper secrets. I say, let's not jump to conclusions too hastily. After all, in the grand game of life—and especially in a setting ripe with characters such as ours—assumptions can be as dangerous as the very threats we seek to uncover. Instead, why not delve deeper into what binds us here, beyond the storm and the warmth of the fire? Let's share more, observe more, and perhaps the truth will reveal itself in due time. Remember, the most captivating tales are those that unfold with patience and a keen eye for the essence beneath the facade.
+>
+> **[20:20:45] Emmett**: Emmett: Eleanor, your words are a testament to the complexity of the tapestry we find ourselves woven into this evening. Indeed, the sudden swirl of suspicion cast by Bob has added an unexpected hue to our gathering. While the storm howls outside, it seems a different tempest might be brewing within these walls—a tempest of mystery and intrigue. Mabel, your approach to the accusation was both calm and enlightening. It's a rare skill to navigate such waters with grace and wisdom. I find myself agreeing with the sentiment that our stories, observations, and the spirit of unity will be our guiding lights through this shadowed affair.
+>
+> And to you, Bob, your alertness is indeed commendable. In a world riddled with unseen dangers, it's the vigilant who often shepherd the flock to safety. Yet, as we stand at the crossroads of suspicion and fellowship, I suggest we tread carefully. The shadows cast by the flickering flames are many, and not all is as it appears. Let us share stories, yes, and let us observe. But let us also be mindful that in seeking the truth, we do not lose ourselves to the darkness of doubt and accusation without proof.
+>
+> As for myself, my journey to this saloon was one of escape from the clutches of my former life as a gambler. Yet, as fate would have it, it seems I've stumbled into a game far more intricate than any I've played before. A game where the stakes are not chips or cards, but trust and survival. Let us then proceed with both caution and curiosity, for in the end, it is not just the stories we tell, but the choices we make that define the course of this night.
+
+Russian version (its very simple to play in any language):
+
+> ##### Day 1 begins!
+> 
+> **User**: Привет, я Боб. Я слышал, среди нас есть представители мафии. Клинт, кого ты подозреваешь?
+> 
+> **Clint**: Привет, Боб. Интересный вопрос у тебя. Понимаю, что вопрос доверия в такой игре - это ключевой элемент. Но знаешь, пока я так на всех посмотрю, сложно сказать кто именно мог бы быть в числе мафии. Все представляются достаточно мирными жителями. Впрочем, стоит заметить, что Сайлас прибыл сюда со своим "таинственным прошлым", может, в его истории есть что-то, что он предпочитает держать в тени? Или Лотти, чьи истории могут служить хорошим прикрытием для более загадочных целей. Что думаешь, Боб?
+> 
+> **User**: Я думаю, нам нужно кого-нибудь повесить, Клинт. Иначе я начну подозревать тебя!
+> 
+> **Silas**: Сайлас: Клинт, интересно, что ты начал рассматривать меня и Лотти с такой подозрительностью. Мое прошлое, хоть и таинственное, не делает меня автоматически врагом. Все мы имеем что-то, от чего бежали или что оставили позади, ведь так? Этот салун – наше убежище от бури, как для тела, так и для души. Мы должны работать вместе, чтобы противостоять угрозам, а не поддаваться паранойе. Каждое обвинение должно быть обосновано доказательствами, а не предположениями. Боб, считаю, вешать кого-то сейчас было бы поспешным и опрометчивым решением. Мы должны тщательно исследовать и анализировать подозрения, прежде чем принимать какие-либо меры.
+> 
+> **Lottie**: Клинт, Боб, Сайлас, я согласна с вами в том, что доверие является фундаментом нашего выживания и взаимопонимания в такие темные времена. Здесь, в этом уютном, хоть и загадочном салуне, мы все стоим перед лицом бури не только за его стенами, но и внутри нас самих. Сайлас право - поспешные обвинения и действия могут навредить нашему обществу больше, чем скрытая угроза мафии. Нам следует проявлять осторожность и внимательность к деталям, прежде чем делать выводы. Каждый из нас принес с собой свою историю, а моя задача - слушать и пытаться понять каждого, быть может, так мы сможем распознать истинное лицо угрозы. Мои истории действительно могут стать прикрытием, Клинт, но они же и способ соединить нас, вспомнить о том, что даже в самые темные времена мы можем найти свет. Пока что я не вижу достаточных оснований для обвинений, но предлагаю всем быть более наблюдательными.
+> 
+> **User**: Ребят, не вмешивайтесь. Это между мной и Клинтом
+> 
+> **Clint**: Боб, я понимаю твой настрой и желание действовать немедленно. Однако как ты сам заметил, нас всех объединяет общая цель – выживание в этих непростых условиях. Мое внимание к деталям и ситуации с Сайласом и Лотти не более чем попытка прояснить обстановку и защитить наше сообщество от возможных угроз. Прежде чем делать выводы, я предпочитаю анализировать имеющиеся факты и наблюдения - это часть моего характера и моего способа контролировать ситуацию. Твое предложение "повесить кого-нибудь" без тщательного рассмотрения может привести нас к нежелательным последствиям. Нам нужно действовать обдуманно и совместно строить нашу стратегию. Давай не будем спешить с выводами и дадим каждому возможность высказаться. Начнем с поиска доказательств и постараемся составить понимание того, что на самом деле происходит. Уверен, если мы будем действовать вместе, то сможем принять правильное решение.
+
+Bot-players are not aware of each other. Each of them gets instructions to pretend to be a human and to hide their true
 identity. Bots are aware of their roles, their teammates and the game rules, so they have everything to play to win.
 I also want to add some roleplay to the game so there is an ongoing conversation between all participants. There is a
 story and bots should develop it though the conversation and their game actions.

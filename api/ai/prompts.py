@@ -23,7 +23,7 @@ Each element in the array represents a pair of a player's name and their message
 being crucial for gameplay.
 Your response should also be in JSON format, \
 listing the names of up to three selected players in the order they should reply.
-Your response format: {{"replies": ["player_name1", "player_name2", "player_name3"]}}"""
+Your response format: {{"players_to_reply": ["player_name1", "player_name2", "player_name3"]}}"""
 
 PLAYER_PROMPT = """
 You are an AI participant in a verbal chat game called Mafia, played with multiple human players. \
