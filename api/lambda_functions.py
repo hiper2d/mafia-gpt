@@ -4,11 +4,13 @@ import logging
 import logging.handlers
 import textwrap
 import uuid
+from collections import Counter
 from typing import Dict
 
 from dotenv import load_dotenv, find_dotenv
 
 from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator, RawAssistant
+from api.ai.prompts import GAME_MASTER_VOTING_COMMAND
 from api.models import Player, Game, ArbiterReply
 from api.player_generator import generate_players
 from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
@@ -167,7 +169,7 @@ def talk_to_all(game_id: str, user_message: str):
     game.user_moves_total_counter += 1
     game.user_moves_day_counter += 1
     arbiter_reply_json = json.loads(arbiter_reply)
-    reply_obj: ArbiterReply = ArbiterReply(replies=arbiter_reply_json['players_to_reply'])
+    reply_obj: ArbiterReply = ArbiterReply(players_to_reply=arbiter_reply_json['players_to_reply'])
 
     for name in reply_obj.players_to_reply:
         player = game.players[name]
@@ -184,10 +186,28 @@ def talk_to_all(game_id: str, user_message: str):
     save_game_to_redis(r, game)
 
 
-def start_elimination_vote(game_id: str):
+def start_elimination_vote(game_id: str, user_vote: str):
+    logger.info("*** Time to vote! ***")
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
+
+    names = Counter([user_vote])
+    for player in game.players.values():
+        new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(r, game_id, player.current_offset + 1)
+        new_messaged_for_player_concatenated = '\n'.join(new_messaged_for_player)
+        voting_instruction = GAME_MASTER_VOTING_COMMAND.format( # todo: include the player
+            latest_messages=new_messaged_for_player_concatenated
+        )
+        player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
+            assistant_id=player.assistant_id, old_thread_id=player.thread_id
+        )
+        answer = player_assistant.ask(voting_instruction)
+        # names[answer] += 1
+        # todo: increase offsets
+        print(answer)
+    return names
+
 
     # todo: implement the voting cycle logic
     # Update arbiter's and player's instructions with the voting result: let the dead player's name
@@ -201,6 +221,7 @@ def delete_assistants_from_openai_and_game_from_redis(game_id: str):
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
+
 
     arbiter = ArbiterAssistantDecorator.load_arbiter_by_assistant_id_and_thread_id(
         assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id

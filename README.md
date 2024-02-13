@@ -130,6 +130,11 @@ The stack I plan to use:
 - Redis (most probably in AWS) to store the chat history and the game state
 - React Native for the frontend
 
+Redis collections I use:
+- STRING: game state with OpenAI assistant and thread ids for Arbiter and Bot-Players
+- SORTED_SET: timestamp of each game so I know when they were created
+- LIST: chat history; arbiter and each Bot-Player maintains the latest row in this history it saw, so the remaining messages can be sent to the personal OpenAI player's thread each time they need to reply 
+
 # The game logic
 
 Right now the whole game is in just few functions. They imitate backend endpoints (I plan to use AWS lambda but to be

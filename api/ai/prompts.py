@@ -118,3 +118,10 @@ Keep your goal in secret, nobody should know it.
 
 Reply with a plain text without any formatting. Don't use new lines, lists, or any other formatting.
 {reply_language_instruction}"""
+
+GAME_MASTER_VOTING_COMMAND = """Game master: It's time to vote! Choose one player to eliminate. \
+You must to vote, you must pick somebody even if you don't see a reason. You cannot choose yourself or nobody. \
+Your response format: {{"player_to_eliminate": "player_name", "reason": "your_reason"}}
+
+Latest messages from other players you might have missed:
+{latest_messages}"""

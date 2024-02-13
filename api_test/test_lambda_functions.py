@@ -2,7 +2,8 @@
 import unittest
 
 from api.lambda_functions import init_game, delete_assistants_from_openai_and_game_from_redis, \
-    get_welcome_messages_from_all_players_async, talk_to_all, delete_assistants_from_openai_by_name, get_latest_game
+    get_welcome_messages_from_all_players_async, talk_to_all, delete_assistants_from_openai_by_name, get_latest_game, \
+    start_elimination_vote
 
 
 class TestGameFunctions(unittest.TestCase):
@@ -13,7 +14,18 @@ class TestGameFunctions(unittest.TestCase):
 
     def test_talk_to_all(self):
         game_id = get_latest_game().id
-        res = talk_to_all(user_message="Hey there, I'm Bob. I heard there is a Mafia among us. I think it's Mabel, I so whe tried to hind a gun under the table!" , game_id=game_id)
+        res = talk_to_all(
+            game_id=game_id,
+            user_message=
+"""Look. There are 2 mafia players among us. If we hang anybody, \
+the change we hit Mafia is much higher that if specifically you wi ll be hang. \
+Let's do this. This is logical. How about we hang Jedediah?"""
+        )
+        print(res)
+
+    def test_start_elimination_vote(self):
+        game_id = get_latest_game().id
+        res = start_elimination_vote(user_vote="Jedediah" , game_id=game_id)
         print(res)
 
     def test_delete_assistants_and_game(self):
