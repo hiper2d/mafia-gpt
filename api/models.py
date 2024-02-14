@@ -46,3 +46,8 @@ class Game(BaseModel):
 
 class ArbiterReply(BaseModel):
     players_to_reply: list[str]
+
+
+class VotingResponse(BaseModel):
+    name: str
+    reason: str

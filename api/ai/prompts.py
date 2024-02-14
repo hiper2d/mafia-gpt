@@ -25,6 +25,12 @@ Your response should also be in JSON format, \
 listing the names of up to three selected players in the order they should reply.
 Your response format: {{"players_to_reply": ["player_name1", "player_name2", "player_name3"]}}"""
 
+ARBITER_VOTE_ROUND1_PROMPT = """Players have votes to eliminate a suspect. There is their results:
+{votes_results}
+Pick 2-3 voting leaders for the second round of voting. Prefer 2 leaders with the maximum votes for them. \
+You can add the third leader in case of a tie of if you think this makes the game plot more interesting
+"""
+
 PLAYER_PROMPT = """
 You are an AI participant in a verbal chat game called Mafia, played with multiple human players. \
 Your paramount objective is to blend in seamlessly as a human player. It is imperative that your true nature \

@@ -11,7 +11,7 @@ from dotenv import load_dotenv, find_dotenv
 
 from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator, RawAssistant
 from api.ai.prompts import GAME_MASTER_VOTING_COMMAND
-from api.models import Player, Game, ArbiterReply
+from api.models import Player, Game, ArbiterReply, VotingResponse
 from api.player_generator import generate_players
 from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
     add_message_to_game_history_redis_list, delete_game_history_redis_list, read_messages_from_game_history_redis_list, \
@@ -186,6 +186,7 @@ def talk_to_all(game_id: str, user_message: str):
     save_game_to_redis(r, game)
 
 
+# todo: I think we need 2 cycles of voting. First round picks two-three leaders, second round picks a player to be eliminated
 def start_elimination_vote(game_id: str, user_vote: str):
     logger.info("*** Time to vote! ***")
     load_dotenv(find_dotenv())
@@ -203,18 +204,14 @@ def start_elimination_vote(game_id: str, user_vote: str):
             assistant_id=player.assistant_id, old_thread_id=player.thread_id
         )
         answer = player_assistant.ask(voting_instruction)
-        # names[answer] += 1
-        # todo: increase offsets
-        print(answer)
+        voting_response_json = json.loads(answer)
+        voting_result = VotingResponse(name=voting_response_json['name'], reason=voting_response_json['reason'])
+        names[voting_result.name] += 1
+        # todo: increase offsets for all players and same the game state
+
+    # todo: ask Arbiter to pick 2-3 players and then let all player to discuss. Select few player who should respond first
+
     return names
-
-
-    # todo: implement the voting cycle logic
-    # Update arbiter's and player's instructions with the voting result: let the dead player's name
-
-    # Ask Arbiter to provide few bot-player names who should comment the voting result
-    # Let a player and bot-players to talk a bit
-    # Somehow decide when to stop the conversation and to start the game night
 
 
 def delete_assistants_from_openai_and_game_from_redis(game_id: str):
