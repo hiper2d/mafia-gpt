@@ -25,12 +25,6 @@ Your response should also be in JSON format, \
 listing the names of up to three selected players in the order they should reply.
 Your response format: {{"players_to_reply": ["player_name1", "player_name2", "player_name3"]}}"""
 
-ARBITER_VOTE_ROUND1_PROMPT = """Players have votes to eliminate a suspect. There is their results:
-{votes_results}
-Pick 2-3 voting leaders for the second round of voting. Prefer 2 leaders with the maximum votes for them. \
-You can add the third leader in case of a tie of if you think this makes the game plot more interesting
-"""
-
 PLAYER_PROMPT = """
 You are an AI participant in a verbal chat game called Mafia, played with multiple human players. \
 Your paramount objective is to blend in seamlessly as a human player. It is imperative that your true nature \
@@ -128,6 +122,7 @@ Reply with a plain text without any formatting. Don't use new lines, lists, or a
 GAME_MASTER_VOTING_COMMAND = """Game master: It's time to vote! Choose one player to eliminate. \
 You must to vote, you must pick somebody even if you don't see a reason. You cannot choose yourself or nobody. \
 Your response format: {{"player_to_eliminate": "player_name", "reason": "your_reason"}}
+Make sure your response is a valid JSON.
 
 Latest messages from other players you might have missed:
 {latest_messages}"""

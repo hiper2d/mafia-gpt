@@ -44,6 +44,7 @@ def _setup_logger(log_level=logging.DEBUG):
 
     return logger
 
+
 logger = _setup_logger(log_level=logging.DEBUG)
 
 
@@ -170,24 +171,31 @@ def talk_to_all(game_id: str, user_message: str):
     game.user_moves_day_counter += 1
     arbiter_reply_json = json.loads(arbiter_reply)
     reply_obj: ArbiterReply = ArbiterReply(players_to_reply=arbiter_reply_json['players_to_reply'])
+    return reply_obj.players_to_reply
 
-    for name in reply_obj.players_to_reply:
-        player = game.players[name]
-        new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(r, game_id, player.current_offset + 1)
-        new_messaged_for_player_concatenated = '\n'.join(new_messaged_for_player)
-        message = f"Reply to these few messages from other players:\n{new_messaged_for_player_concatenated}"
-        player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
-            assistant_id=player.assistant_id, thread_id=player.thread_id
-        )
-        player_reply = player_assistant.ask(message)
-        player_reply_message = f"{player.name}: {player_reply}"
-        add_message_to_game_history_redis_list(r, game_id, [player_reply_message])
-        player.current_offset = new_offset
+
+def talk_to_certain_player(game_id: str, name: str):
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
+    if name not in game.players:
+        return None
+    player = game.players[name]
+
+    new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(r, game_id, player.current_offset + 1)
+    new_messaged_for_player_concatenated = '\n'.join(new_messaged_for_player)
+    message = f"Reply to these few messages from other players:\n{new_messaged_for_player_concatenated}"
+    player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
+        assistant_id=player.assistant_id, thread_id=player.thread_id
+    )
+    player_reply = player_assistant.ask(message)
+    player_reply_message = f"{player.name}: {player_reply}"
+    add_message_to_game_history_redis_list(r, game_id, [player_reply_message])
+    player.current_offset = new_offset
     save_game_to_redis(r, game)
+    return player_reply
 
 
-# todo: I think we need 2 cycles of voting. First round picks two-three leaders, second round picks a player to be eliminated
-def start_elimination_vote(game_id: str, user_vote: str):
+def start_elimination_vote_round_one(game_id: str, user_vote: str):
     logger.info("*** Time to vote! ***")
     load_dotenv(find_dotenv())
     r = connect_to_redis()
@@ -205,13 +213,42 @@ def start_elimination_vote(game_id: str, user_vote: str):
         )
         answer = player_assistant.ask(voting_instruction)
         voting_response_json = json.loads(answer)
-        voting_result = VotingResponse(name=voting_response_json['name'], reason=voting_response_json['reason'])
+        voting_result = VotingResponse(name=voting_response_json['player_to_eliminate'], reason=voting_response_json['reason'])
         names[voting_result.name] += 1
-        # todo: increase offsets for all players and same the game state
+        # todo: increase offsets for all players and save the game state
 
-    # todo: ask Arbiter to pick 2-3 players and then let all player to discuss. Select few player who should respond first
+    leaders = names.most_common(3)
+    candidate_1, votes_for_candidate_1 = leaders[0]
+    candidate_2, votes_for_candidate_2 = leaders[1]
+    candidate_3, votes_for_candidate_3 = leaders[2]
+    logger.info(f"Vote results (round one): {candidate_1} - {votes_for_candidate_1}, "
+                f"{candidate_2} - {votes_for_candidate_2}, {candidate_3} - {votes_for_candidate_3}")
+    if votes_for_candidate_1 == votes_for_candidate_2 or votes_for_candidate_2 == votes_for_candidate_3:
+        return [candidate_1, candidate_2, candidate_3]
+    else:
+        return [candidate_1, candidate_2]
 
-    return names
+
+def ask_player_to_speak_for_themself_after_first_round_voting(game_id: str, name: str):
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
+    if name not in game.players:
+        return None
+    player = game.players[name]
+
+    new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(r, game_id, player.current_offset + 1)
+    new_messaged_for_player_concatenated = '\n'.join(new_messaged_for_player)
+    message = (f"Player have chosen you as a candidate for elimination. Protect yourself. Explain why you should not be "
+               f"eliminated. Below are the latest messages:\n{new_messaged_for_player_concatenated}")
+    player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
+        assistant_id=player.assistant_id, thread_id=player.thread_id
+    )
+    player_reply = player_assistant.ask(message)
+    player_reply_message = f"{player.name}: {player_reply}"
+    add_message_to_game_history_redis_list(r, game_id, [player_reply_message])
+    player.current_offset = new_offset
+    save_game_to_redis(r, game)
+    return player_reply
 
 
 def delete_assistants_from_openai_and_game_from_redis(game_id: str):
