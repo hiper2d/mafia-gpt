@@ -11,6 +11,29 @@ class MafiaRole(Enum):
     VILLAGER = 'Villager'  # A regular townsperson without a special role
 
 
+role_motivations = {
+    MafiaRole.MAFIA: "Seeks to control the town from the shadows, operating with cunning and secrecy. \
+    Their goal is to eliminate non-Mafia players while protecting their own. They must act covertly, executing their \
+    plans under the cover of night and misleading others during the day to conceal their true identity.",
+
+    MafiaRole.DOCTOR: "Dedicated to saving lives, the Doctor works to protect those in danger from Mafia attacks. \
+    Their main goal is to identify and eliminate the Mafia threat, using their night actions to safeguard potential \
+    targets. All non-Mafia players are allies in the quest for peace.",
+
+    MafiaRole.DETECTIVE: "With a keen eye for deceit, the Detective investigates players to uncover their true \
+    alignments. Their mission is to use this knowledge to guide the town in rooting out the Mafia menace, employing \
+    their night actions to gather crucial intelligence.",
+
+    MafiaRole.ESCORT: "Utilizing their unique skills, the Escort can block players from performing their night actions,\
+    potentially thwarting Mafia plans. Their primary objective is to protect the town and help eliminate the Mafia, \
+    using their abilities to disrupt enemy strategies.",
+
+    MafiaRole.VILLAGER: "As a regular townsperson, the Villager lacks special actions but plays a critical role in \
+    discussions and votes to eliminate the Mafia threat. Vigilance and collaboration with fellow non-Mafia players \
+    are their main weapons in the quest for safety and order."
+}
+
+
 class Temperament(Enum):
     CHOLERIC = 'Choleric'
     MELANCHOLIC = 'Melancholic'
@@ -18,14 +41,19 @@ class Temperament(Enum):
     SANGUINE = 'Sanguine'
 
 
-class Player(BaseModel):
+class HumanPlayer(BaseModel):
+    name: str
+    role: MafiaRole
+
+
+class BotPlayer(BaseModel):
     name: str
     assistant_id: str
     thread_id: str
     role: MafiaRole
     backstory: str
     role_motivation: str
-    temperament: Temperament
+    temperament: str
     is_alive: bool = True
     current_offset: int = 1  # 1 message is reserved for the welcome message
     # fixme: init current_offset to 0 and increase on welcome message
@@ -36,7 +64,8 @@ class Game(BaseModel):
     story: str
     arbiter_assistant_id: str
     arbiter_thread_id: str
-    players: dict[str, Player] # todo: rename to bot_players and add human_player
+    bot_players: dict[str, BotPlayer]
+    human_player: HumanPlayer
     current_offset: int = 0
     current_day: int = 1
     user_moves_day_counter: int = 0

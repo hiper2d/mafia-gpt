@@ -18,6 +18,10 @@ This information is crucial for understanding the dynamics and interactions with
 {players_names_with_roles_and_stories}
 [END OF PLAYERS NAMES AND ROLES]
 
+This is one more player with the {human_player_name} role. You should not include this player in your responses. \
+This player is unique and can make a turn whenever they want. But you should be aware that this player also \
+participates the game.\
+
 The messages you receive will be in this JSON format: {{"player_name": "string", "message": "string"}}. \
 Each element in the array represents a pair of a player's name and their message, with the sequence of messages \
 being crucial for gameplay.
@@ -98,11 +102,7 @@ Game Progression:
 - The game master may provide hints or moderate discussions to keep the game on track.
 [START OF GAME RULES FOR MAFIA PARTY GAME]
 
-You will interact with players, each having a unique story:
-
-[START OF PLAYERS NAMES AND THEIR STORIES]
-{players_names_and_stories}
-[END OF PLAYERS NAMES AND THEIR STORIES]
+You will interact with other players. Here are their names: {players_names}
 
 In the game, you will receive user inputs comprising multiple messages from different players. \
 The format of these messages is:

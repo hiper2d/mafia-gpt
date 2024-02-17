@@ -5,8 +5,8 @@ from typing import Optional, List
 from openai import OpenAI
 from openai.types.beta import Assistant, Thread
 
-from api.ai.prompts import PLAYER_PROMPT, ARBITER_PROMPT
-from api.models import Player, MafiaRole
+from api.ai.assistant_prompts import PLAYER_PROMPT, ARBITER_PROMPT
+from api.models import BotPlayer, MafiaRole
 
 logger = logging.getLogger('my_application')
 
@@ -110,8 +110,8 @@ class ArbiterAssistantDecorator(RawAssistant):
         super().__init__(assistant, thread)
 
     @staticmethod
-    def create_arbiter(players: List[Player], game_story: str) -> "ArbiterAssistantDecorator":
-        formatted_prompt = ArbiterAssistantDecorator._prepare_prompt(players, game_story)
+    def create_arbiter(players: List[BotPlayer], game_story: str, human_player_name: str) -> "ArbiterAssistantDecorator":
+        formatted_prompt = ArbiterAssistantDecorator._prepare_prompt(players, game_story, human_player_name)
         instance = RawAssistant.create_with_new_assistant(assistant_name='Arbiter', prompt=formatted_prompt)
         return ArbiterAssistantDecorator(instance.assistant, instance.thread)
 
@@ -126,7 +126,7 @@ class ArbiterAssistantDecorator(RawAssistant):
         return ArbiterAssistantDecorator(instance.assistant, instance.thread)
 
     @staticmethod
-    def _prepare_prompt(players: List[Player], game_story: str) -> str:
+    def _prepare_prompt(players: List[BotPlayer], game_story: str, human_player_name: str) -> str:
         players_names_with_roles_and_stories = ""
         for player in players:
             player_info = f"Name: {player.name}\nRole: {player.role}\nStory: {player.backstory}\n\n"
@@ -135,6 +135,7 @@ class ArbiterAssistantDecorator(RawAssistant):
 
         return ARBITER_PROMPT.format(
             game_story=game_story,
+            human_player_name=human_player_name,
             players_names_with_roles_and_stories=players_names_with_roles_and_stories
         )
 
@@ -144,10 +145,9 @@ class PlayerAssistantDecorator(RawAssistant):
         super().__init__(assistant, thread)
 
     @classmethod
-    def create_player(cls, player: Player, game_story: str, players_names_and_stories: str,
+    def create_player(cls, player: BotPlayer, game_story: str, players_names: str,
                       reply_language_instruction: str) -> "PlayerAssistantDecorator":
-        formatted_prompt = cls._prepare_prompt(player, game_story, players_names_and_stories,
-                                               reply_language_instruction)
+        formatted_prompt = cls._prepare_prompt(player, game_story, players_names, reply_language_instruction)
         raw_assistant = cls.create_with_new_assistant(assistant_name=player.name, prompt=formatted_prompt)
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
@@ -163,21 +163,21 @@ class PlayerAssistantDecorator(RawAssistant):
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
     @staticmethod
-    def _prepare_prompt(player: Player, game_story: str, players_names_and_stories: str,
+    def _prepare_prompt(player: BotPlayer, game_story: str, players_names: str,
                         reply_language_instruction: str) -> str:
-        def get_win_condition(p: Player):
+        def get_win_condition(p: BotPlayer):
             if p.role == MafiaRole.MAFIA:
                 return "You win if the Mafia members are the majority of the remaining players."
             else:
                 return "You win if all the Mafia members are eliminated."
 
-        def get_ally_roles(p: Player):
+        def get_ally_roles(p: BotPlayer):
             if p.role == MafiaRole.MAFIA:
                 return [MafiaRole.MAFIA]
             else:
                 return [MafiaRole.VILLAGER, MafiaRole.DOCTOR, MafiaRole.DETECTIVE, MafiaRole.ESCORT]
 
-        def get_enemy_roles(p: Player):
+        def get_enemy_roles(p: BotPlayer):
             if p.role == MafiaRole.MAFIA:
                 return [MafiaRole.VILLAGER, MafiaRole.DOCTOR, MafiaRole.DETECTIVE, MafiaRole.ESCORT]
             else:
@@ -190,7 +190,7 @@ class PlayerAssistantDecorator(RawAssistant):
             role_motivation=player.role_motivation,
             temperament=player.temperament,
             game_story=game_story,
-            players_names_and_stories=players_names_and_stories,
+            players_names=players_names,
             win_condition=get_win_condition(player),
             ally_roles=get_ally_roles(player),
             enemy_roles=get_enemy_roles(player),

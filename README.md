@@ -131,9 +131,11 @@ The stack I plan to use:
 - React Native for the frontend
 
 Redis collections I use:
+
 - STRING: game state with OpenAI assistant and thread ids for Arbiter and Bot-Players
 - SORTED_SET: timestamp of each game so I know when they were created
-- LIST: chat history; arbiter and each Bot-Player maintains the latest row in this history it saw, so the remaining messages can be sent to the personal OpenAI player's thread each time they need to reply 
+- LIST: chat history; arbiter and each Bot-Player maintains the latest row in this history it saw, so the remaining
+  messages can be sent to the personal OpenAI player's thread each time they need to reply
 
 # The game logic
 
@@ -162,6 +164,7 @@ able to run locally as REST endpoints on a local web server). There is no client
         Asks each bot player to generate a welcome message. Return all messages in a list. I plan to merge it into
         the `init_game` function.
 
+
 - talk_to_all
 
         This is there the game begins. A user sends some message to the chat to other players.
@@ -173,22 +176,50 @@ able to run locally as REST endpoints on a local web server). There is no client
         Arbiter AI will need those messages to have the complete history of the conversion. It will also be needed for UI in the
         future.
 
-- start_elimination_vote
 
-        The function suppose to ask every bot player to vote for the elimination of one player. The player with the most votes
-        is considered to be dead and leaves the game. The Arbiter and Bot-Players update the list of live players in their
-        instructions. In case of a tie, apply a tiebreaker strategy with I still need to think of. The function is not
-        implemented yet.
+- talk_to_certain_player
+
+        This lambda is called after the `talk_to_all` function by the client to get actual reponses from the bot-players
+
+
+- start_elimination_vote_round_one
+
+        This function asks each player-bot to vote. They must provide one name and a reson for debugging purposes.
+        The function calculates 2-3 leaders and adds a message to the Redis list history to everyone about the first
+        round of vote results. The game state is updated and saved to Redis. 
+
+        The function received a user_message which is a vote for a player.
+
+
+- ask_bot_player_to_speak_for_themself_after_first_round_voting
+
+        A bot-player who is a leader is beang asked to speak for themself after the first round of voting.
+
+
+- let_human_player_to_speak_for_themself
+
+        Same as the previous function but for a human player.
+
+
+- start_elimination_vote_round_two
+
+        The same as the first round of voting but only among the first round leaders. The function calculates the final
+        result and updates all promts that this player is dead now. Post a message to che chat about that with 
+        the player's role. In case of a tie randomly pick the victim but in future it should be decided by some game 
+        roles.
+
 
 - end_current_date_and_start_night
 
-        The function ends a day and asks each player with a role to perform their action. The function is not implemented yet.
+        tbd
+
 
 - etc
 
         The logic of what function to call will be implemented on the client side. Most of game stages go one after another in a
         strict order. The only flexible stage is the day discussion. Somehow I need to decide when to end it and to start the
         next stages and eventually a new day.
+
 
 After that the game will be complete. Sounds like I should have something playable in few weeks :beer:
 

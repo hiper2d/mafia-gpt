@@ -8,9 +8,8 @@ from api.lambda_functions import init_game, delete_assistants_from_openai_and_ga
 
 class TestGameFunctions(unittest.TestCase):
     def test_init_game_and_welcome(self):
-        # game_id = init_game(reply_language_instruction='Reply in russian to me but keep original names (in English).
-        # Отвечай на русском, но сохрани оригинальные имена.')
-        game_id = init_game()
+        game_id = init_game(human_player_name='Alex', reply_language_instruction='Reply in russian to me but keep original names (in English). Отвечай на русском, но сохрани оригинальные имена.')
+        # game_id = init_game(human_player_name='Alex')
         get_welcome_messages_from_all_players_async(game_id=game_id)
 
     def test_talk_to_all(self):
@@ -18,9 +17,11 @@ class TestGameFunctions(unittest.TestCase):
         players_to_reply = talk_to_all(
             game_id=game_id,
             user_message=
-"""Look. There are 2 mafia players among us. If we hang anybody, \
+"""\
+Look. There are 2 mafia players among us. If we hang anybody, \
 the change we hit Mafia is much higher that if specifically you wi ll be hang. \
-Let's do this. This is logical. How about we hang Jedediah?"""
+Let's do this. This is logical. How about we hang Jedediah?\
+"""
         )
         for player_name in players_to_reply:
             talk_to_certain_player(game_id=game_id, name=player_name)
