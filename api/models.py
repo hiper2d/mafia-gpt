@@ -55,8 +55,7 @@ class BotPlayer(BaseModel):
     role_motivation: str
     temperament: str
     is_alive: bool = True
-    current_offset: int = 1  # 1 message is reserved for the welcome message
-    # fixme: init current_offset to 0 and increase on welcome message
+    current_offset: int = -1
 
 
 class Game(BaseModel):

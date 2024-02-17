@@ -12,7 +12,7 @@ logger = logging.getLogger('my_application')
 
 def generate_scene_and_players(num_players, mafia_count: int, additional_roles: List[MafiaRole],
                                human_player_name: str, theme: str = 'Western') -> Tuple[str, MafiaRole, Dict[str, BotPlayer]]:
-    logging.debug(f"Generating {num_players} players for a new game. Theme: {theme}.")
+    logger.debug(f"Generating {num_players} players for a new game. Theme: {theme}.")
     roles: List[MafiaRole] = _generate_mafia_roles(num_players, mafia_count, additional_roles)
     human_player_role = _pick_and_remove_role(roles)
 

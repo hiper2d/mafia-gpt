@@ -170,19 +170,20 @@ def talk_to_certain_player(game_id: str, name: str):
     game: Game = load_game_from_redis(r, game_id)
     if name not in game.bot_players:
         return None
-    player = game.bot_players[name]
+    bot_player = game.bot_players[name]
 
-    new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(r, game_id,
-                                                                                     player.current_offset + 1)
+    new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(
+        r, game_id, bot_player.current_offset + 1
+    )
     new_messaged_for_player_concatenated = '\n'.join(new_messaged_for_player)
     message = f"Reply to these few messages from other players:\n{new_messaged_for_player_concatenated}"
     player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
-        assistant_id=player.assistant_id, thread_id=player.thread_id
+        assistant_id=bot_player.assistant_id, thread_id=bot_player.thread_id
     )
     player_reply = player_assistant.ask(message)
-    player_reply_message = f"{player.name}: {player_reply}"
+    player_reply_message = f"{bot_player.name}: {player_reply}"
     add_message_to_game_history_redis_list(r, game_id, [player_reply_message])
-    player.current_offset = new_offset
+    bot_player.current_offset = new_offset + 1 # todo: return new_offset when adding a new message
     save_game_to_redis(r, game)
     return player_reply
 
