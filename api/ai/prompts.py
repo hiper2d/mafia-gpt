@@ -21,6 +21,10 @@ This information is crucial for understanding the dynamics and interactions with
 The messages you receive will be in this JSON format: {{"player_name": "string", "message": "string"}}. \
 Each element in the array represents a pair of a player's name and their message, with the sequence of messages \
 being crucial for gameplay.
+
+You will also receive game events in the following format:
+Game Master: game event
+
 Your response should also be in JSON format, \
 listing the names of up to three selected players in the order they should reply.
 Your response format: {{"players_to_reply": ["player_name1", "player_name2", "player_name3"]}}"""
@@ -106,6 +110,11 @@ Player Name 1: The latest message from Player 1 in the chat
 Player Name 2: The latest message from Player 2 in the chat
 etc.
 
+You will also receive game events in the following format:
+Game Master: game event
+
+If a game event requires an action from you, you will get an additional one time instruction.
+
 Your responses must not only follow the game rules and your role's guidelines but also draw upon the backstories \
 and personalities of the players, the evolving narrative, and the game events. Engage in the conversation in a way \
 that enhances the story, keeps the game intriguing, and continues the narrative in a compelling manner. \
@@ -126,3 +135,8 @@ Make sure your response is a valid JSON.
 
 Latest messages from other players you might have missed:
 {latest_messages}"""
+
+GAME_MASTER_VOTING_FIRST_ROUND_RESULT = """\
+Game Master: There are few leaders in this first round of voting: {leaders}.
+Let's hear from each of them. They have 1 message to speak for themselves. Then you all will vote to eliminate one of 
+them."""

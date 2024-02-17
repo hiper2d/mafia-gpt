@@ -3,7 +3,7 @@ import unittest
 
 from api.lambda_functions import init_game, delete_assistants_from_openai_and_game_from_redis, \
     get_welcome_messages_from_all_players_async, talk_to_all, delete_assistants_from_openai_by_name, get_latest_game, \
-    start_elimination_vote_round_one, talk_to_certain_player, ask_player_to_speak_for_themself_after_first_round_voting
+    start_elimination_vote_round_one, talk_to_certain_player, ask_bot_player_to_speak_for_themself_after_first_round_voting
 
 
 class TestGameFunctions(unittest.TestCase):
@@ -29,7 +29,7 @@ Let's do this. This is logical. How about we hang Jedediah?"""
         game_id = get_latest_game().id
         players_to_eliminate = start_elimination_vote_round_one(user_vote="Jedediah", game_id=game_id)
         for player_name in players_to_eliminate:
-            ask_player_to_speak_for_themself_after_first_round_voting(game_id=game_id, name=player_name)
+            ask_bot_player_to_speak_for_themself_after_first_round_voting(game_id=game_id, name=player_name)
 
     def test_delete_assistants_and_game(self):
         game_id = get_latest_game().id

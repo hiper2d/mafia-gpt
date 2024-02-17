@@ -5,12 +5,12 @@ import logging.handlers
 import textwrap
 import uuid
 from collections import Counter
-from typing import Dict
+from typing import Dict, List, Tuple
 
 from dotenv import load_dotenv, find_dotenv
 
 from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator, RawAssistant
-from api.ai.prompts import GAME_MASTER_VOTING_COMMAND
+from api.ai.prompts import GAME_MASTER_VOTING_COMMAND, GAME_MASTER_VOTING_FIRST_ROUND_RESULT
 from api.models import Player, Game, ArbiterReply, VotingResponse
 from api.player_generator import generate_players
 from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
@@ -195,7 +195,7 @@ def talk_to_certain_player(game_id: str, name: str):
     return player_reply
 
 
-def start_elimination_vote_round_one(game_id: str, user_vote: str):
+def start_elimination_vote_round_one(game_id: str, user_vote: str) -> List[str]:
     logger.info("*** Time to vote! ***")
     load_dotenv(find_dotenv())
     r = connect_to_redis()
@@ -215,21 +215,26 @@ def start_elimination_vote_round_one(game_id: str, user_vote: str):
         voting_response_json = json.loads(answer)
         voting_result = VotingResponse(name=voting_response_json['player_to_eliminate'], reason=voting_response_json['reason'])
         names[voting_result.name] += 1
+        player.current_offset = new_offset
         # todo: increase offsets for all players and save the game state
 
-    leaders = names.most_common(3)
-    candidate_1, votes_for_candidate_1 = leaders[0]
-    candidate_2, votes_for_candidate_2 = leaders[1]
-    candidate_3, votes_for_candidate_3 = leaders[2]
+    all_votes = names.most_common(3)
+    candidate_1, votes_for_candidate_1 = all_votes[0]
+    candidate_2, votes_for_candidate_2 = all_votes[1]
+    candidate_3, votes_for_candidate_3 = all_votes[2]
     logger.info(f"Vote results (round one): {candidate_1} - {votes_for_candidate_1}, "
                 f"{candidate_2} - {votes_for_candidate_2}, {candidate_3} - {votes_for_candidate_3}")
     if votes_for_candidate_1 == votes_for_candidate_2 or votes_for_candidate_2 == votes_for_candidate_3:
-        return [candidate_1, candidate_2, candidate_3]
+        leaders = [candidate_1, candidate_2, candidate_3]
     else:
-        return [candidate_1, candidate_2]
+        leaders = [candidate_1, candidate_2]
+    leaders_str = ', '.join(leaders)
+    voting_result_message = GAME_MASTER_VOTING_FIRST_ROUND_RESULT.format(leaders=leaders_str)
+    add_message_to_game_history_redis_list(r, game_id, [voting_result_message])
+    return leaders
 
 
-def ask_player_to_speak_for_themself_after_first_round_voting(game_id: str, name: str):
+def ask_bot_player_to_speak_for_themself_after_first_round_voting(game_id: str, name: str) -> str:
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
     if name not in game.players:
@@ -238,6 +243,7 @@ def ask_player_to_speak_for_themself_after_first_round_voting(game_id: str, name
 
     new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(r, game_id, player.current_offset + 1)
     new_messaged_for_player_concatenated = '\n'.join(new_messaged_for_player)
+    # todo: move message to prompts with the "Game Master: " prefix there.
     message = (f"Player have chosen you as a candidate for elimination. Protect yourself. Explain why you should not be "
                f"eliminated. Below are the latest messages:\n{new_messaged_for_player_concatenated}")
     player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
@@ -251,11 +257,19 @@ def ask_player_to_speak_for_themself_after_first_round_voting(game_id: str, name
     return player_reply
 
 
+def let_human_player_to_speak_for_themself(game_id: str, user_message: str) -> None:
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
+    ...
+
+def start_elimination_vote_round_two(game_id: str, user_vote: str) -> Tuple[str, str]: # message to all, name of a players who should speak next
+    ...
+
+
 def delete_assistants_from_openai_and_game_from_redis(game_id: str):
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
-
 
     arbiter = ArbiterAssistantDecorator.load_arbiter_by_assistant_id_and_thread_id(
         assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
