@@ -128,15 +128,38 @@ Keep your goal in secret, nobody should know it.
 Reply with a plain text without any formatting. Don't use new lines, lists, or any other formatting.
 {reply_language_instruction}"""
 
-GAME_MASTER_VOTING_COMMAND = """Game master: It's time to vote! Choose one player to eliminate. \
+GAME_MASTER_VOTING_FIRST_ROUND_COMMAND = """Game master: It's time to vote! Choose one player to eliminate. \
 You must to vote, you must pick somebody even if you don't see a reason. You cannot choose yourself or nobody. \
 Your response format: {{"player_to_eliminate": "player_name", "reason": "your_reason"}}
-Make sure your response is a valid JSON.
 
 Latest messages from other players you might have missed:
-{latest_messages}"""
+{latest_messages}
+
+Make sure your response is a valid JSON. For example:
+{{"player_to_eliminate": "John", "reason": "I don't trust him."}}"""
 
 GAME_MASTER_VOTING_FIRST_ROUND_RESULT = """\
 Game Master: There are few leaders in this first round of voting: {leaders}.
 Let's hear from each of them. They have 1 message to speak for themselves. Then you all will vote to eliminate one of 
 them."""
+
+GAME_MASTER_VOTING_FIRST_ROUND_DEFENCE_COMMAND = """\
+Game Master: Player have chosen you as a candidate for elimination. Protect yourself. \
+Explain why you should not be eliminated.
+
+Latest messages from other players you might have missed:
+{latest_messages}"""
+
+GAME_MASTER_VOTING_SECOND_ROUND_COMMAND = """\
+Game master: It's time for the final vote! Choose one player to eliminate for the following list: {leaders}
+Your response format: {{"player_to_eliminate": "player_name", "reason": "your_reason"}}
+
+Latest messages from other players you might have missed:
+{latest_messages}
+
+Make sure your response is a valid JSON. For example:
+{{"player_to_eliminate": "John", "reason": "I don't trust him."}}"""
+
+GAME_MASTER_VOTING_SECOND_ROUND_RESULT = """\
+Game Master: You decided to kill the following player {leader}. This player had a role of {role}. \
+Now it is time to start the night."""

@@ -209,9 +209,9 @@ able to run locally as REST endpoints on a local web server). There is no client
         roles.
 
 
-- end_current_date_and_start_night
+- start_game_night
 
-        tbd
+        Starts the game night. Not yet implemented.
 
 
 - etc

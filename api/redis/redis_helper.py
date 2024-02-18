@@ -7,6 +7,7 @@ import logging
 
 logger = logging.getLogger('my_application')
 
+
 def connect_to_redis() -> Redis:
     try:
         r = Redis(host=os.getenv("REDIS_HOST"), port=os.getenv("REDIS_PORT"), db=0)
@@ -14,6 +15,7 @@ def connect_to_redis() -> Redis:
         return r
     except ConnectionError as e:
         logger.error("Failed to connect to Redis: %s", e)
+
 
 def save_game_to_redis(r: Redis, game: Game):
     game_json = game.model_dump_json()
@@ -38,6 +40,7 @@ def save_game_to_redis(r: Redis, game: Game):
     else:
         logger.warning(f"Failed to save game data for ID {game.id}")
 
+
 def delete_game_from_redis(r: Redis, game: Game):
     deleted = r.delete(game.id)
     if deleted:
@@ -51,6 +54,7 @@ def delete_game_from_redis(r: Redis, game: Game):
     else:
         logger.warning(f"Failed to remove game ID {game.id} from sorted set")
 
+
 def load_game_from_redis(r: Redis, game_id: str) -> Optional[Game]:
     game_json = r.get(game_id)
     if game_json:
@@ -59,6 +63,7 @@ def load_game_from_redis(r: Redis, game_id: str) -> Optional[Game]:
     else:
         logger.warning(f"Game with id {game_id} not found in Redis")
         return None
+
 
 def read_newest_game_from_redis(r: Redis) -> Optional[Game]:
     try:
@@ -84,23 +89,20 @@ def read_newest_game_from_redis(r: Redis) -> Optional[Game]:
         return None
 
 
-def add_message_to_game_history_redis_list(r: Redis, game_id: str, messages: List[str]):
+def add_message_to_game_history_redis_list(r: Redis, game_id: str, messages: List[str]) -> Tuple[bool, int]:
     if messages:
         pushed = r.rpush(f"{game_id}:history", *messages)
         if pushed:
-            logger.debug(f"{len(messages)} messages added to game {game_id}")
+            latest_index = pushed - 1  # Calculate the index of the last added message
+            logger.debug(f"{len(messages)} messages added to game {game_id}, latest index: {latest_index}")
+            return True, latest_index
         else:
             logger.warning(f"Failed to add messages to game {game_id}")
+            return False, -1
     else:
         logger.debug("No messages to add.")
+        return False, -1
 
-def delete_game_history_redis_list(r: Redis, game_id: str):
-    list_key = f"{game_id}:history"
-    result = r.delete(list_key)
-    if result:
-        logger.debug(f"List {list_key} deleted successfully.")
-    else:
-        logger.warning(f"List {list_key} does not exist or could not be deleted.")
 
 def read_messages_from_game_history_redis_list(r: Redis, game_id: str, read_from_line: int) -> Tuple[List[str], int]:
     if not r.exists(f"{game_id}:history"):
@@ -115,3 +117,12 @@ def read_messages_from_game_history_redis_list(r: Redis, game_id: str, read_from
     latest_index = total_length - 1  # Subtracting 1 because list indices start at 0
     logger.debug(f"Read {len(decoded_messages)} messages from game {game_id}")
     return decoded_messages, latest_index
+
+
+def delete_game_history_redis_list(r: Redis, game_id: str):
+    list_key = f"{game_id}:history"
+    result = r.delete(list_key)
+    if result:
+        logger.debug(f"List {list_key} deleted successfully.")
+    else:
+        logger.warning(f"List {list_key} does not exist or could not be deleted.")

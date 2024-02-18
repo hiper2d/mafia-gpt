@@ -64,8 +64,8 @@ class RawAssistant:
         waiting_limit = 60
         waiting_counter = 0
         while True and waiting_counter < waiting_limit:
-            time.sleep(1)
-            waiting_counter += 1
+            time.sleep(5)
+            waiting_counter += 5
 
             run_status = self._get_run_status(run)
             if run_status.status == 'completed':
