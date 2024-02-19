@@ -11,6 +11,14 @@ class MafiaRole(Enum):
     VILLAGER = 'Villager'  # A regular townsperson without a special role
 
 
+role_order_map = {
+    MafiaRole.MAFIA: 2,
+    MafiaRole.DOCTOR: 4,
+    MafiaRole.DETECTIVE: 3,
+    MafiaRole.ESCORT: 1,
+}
+
+
 role_motivations = {
     MafiaRole.MAFIA: "Seeks to control the town from the shadows, operating with cunning and secrecy. \
     Their goal is to eliminate non-Mafia players while protecting their own. They must act covertly, executing their \

@@ -81,6 +81,10 @@ class RawAssistant:
         logger.error(f"Something went wrong, got no response for {waiting_limit} seconds.")
         return "Error: No response received."
 
+    def update_instruction(self, new_instruction: str):
+        self.client.beta.assistants.update(assistant_id=self.assistant.id, instructions=new_instruction)
+        logger.debug(f"Updated instruction for {self.assistant.name} (id: {self.assistant.id})")
+
     def delete(self):
         self.client.beta.assistants.delete(assistant_id=self.assistant.id)
         logger.debug(f"Deleted {self.assistant.name} (id: {self.assistant.id})")
@@ -108,6 +112,9 @@ class RawAssistant:
 class ArbiterAssistantDecorator(RawAssistant):
     def __init__(self, assistant: Assistant, thread: Thread):
         super().__init__(assistant, thread)
+
+    def update_arbiter_instruction(self, players: List[BotPlayer], game_story: str, human_player_name: str):
+        super().update_instruction(self._prepare_prompt(players, game_story, human_player_name))
 
     @staticmethod
     def create_arbiter(players: List[BotPlayer], game_story: str, human_player_name: str) -> "ArbiterAssistantDecorator":
@@ -144,10 +151,21 @@ class PlayerAssistantDecorator(RawAssistant):
     def __init__(self, assistant: Assistant, thread: Thread):
         super().__init__(assistant, thread)
 
+    def update_player_instruction(self, player: BotPlayer, game_story: str, players_names: str,
+                           dead_players_names_with_roles: str, reply_language_instruction: str):
+        new_instruction = self._prepare_prompt(
+            player=player, game_story=game_story, players_names=players_names,
+            dead_players_names_with_roles=dead_players_names_with_roles,
+            reply_language_instruction=reply_language_instruction
+        )
+        super().update_instruction(new_instruction)
+
     @classmethod
     def create_player(cls, player: BotPlayer, game_story: str, players_names: str,
                       reply_language_instruction: str) -> "PlayerAssistantDecorator":
-        formatted_prompt = cls._prepare_prompt(player, game_story, players_names, reply_language_instruction)
+        formatted_prompt = cls._prepare_prompt(
+            player, game_story, players_names, "Empty", reply_language_instruction
+        )
         raw_assistant = cls.create_with_new_assistant(assistant_name=player.name, prompt=formatted_prompt)
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
@@ -163,7 +181,7 @@ class PlayerAssistantDecorator(RawAssistant):
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
     @staticmethod
-    def _prepare_prompt(player: BotPlayer, game_story: str, players_names: str,
+    def _prepare_prompt(player: BotPlayer, game_story: str, players_names: str, dead_players_names_with_roles: str,
                         reply_language_instruction: str) -> str:
         def get_win_condition(p: BotPlayer):
             if p.role == MafiaRole.MAFIA:
@@ -191,6 +209,7 @@ class PlayerAssistantDecorator(RawAssistant):
             temperament=player.temperament,
             game_story=game_story,
             players_names=players_names,
+            dead_players_names_with_roles=dead_players_names_with_roles,
             win_condition=get_win_condition(player),
             ally_roles=get_ally_roles(player),
             enemy_roles=get_enemy_roles(player),

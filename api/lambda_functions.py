@@ -4,7 +4,7 @@ import logging
 import logging.handlers
 import uuid
 from collections import Counter
-from typing import List, Tuple
+from typing import List
 
 from dotenv import load_dotenv, find_dotenv
 
@@ -13,7 +13,7 @@ from api.ai.assistant_prompts import GAME_MASTER_VOTING_FIRST_ROUND_COMMAND, GAM
     GAME_MASTER_VOTING_SECOND_ROUND_RESULT
 from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator, RawAssistant
 from api.ai.text_generators import generate_scene_and_players, generate_human_player
-from api.models import Game, ArbiterReply, VotingResponse, MafiaRole, HumanPlayer
+from api.models import Game, ArbiterReply, VotingResponse, MafiaRole, HumanPlayer, role_order_map
 from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
     add_message_to_game_history_redis_list, delete_game_history_redis_list, read_messages_from_game_history_redis_list, \
     delete_game_from_redis, read_newest_game_from_redis
@@ -50,13 +50,13 @@ def _setup_logger(log_level=logging.DEBUG):
 logger = _setup_logger(log_level=logging.DEBUG)
 
 
-def init_game(human_player_name: str, reply_language_instruction: str = ''):
+def init_game(human_player_name: str, theme: str, reply_language_instruction: str = ''):
     logger.info("*** Starting new game! ***\n")
     load_dotenv(find_dotenv())
 
     game_scene, human_player_role, bot_players = generate_scene_and_players(
         6, 2, [MafiaRole.DOCTOR, MafiaRole.DETECTIVE],
-        theme='Western', human_player_name=human_player_name
+        theme=theme, human_player_name=human_player_name
     )
     logger.info("Game Scene: %s\n", game_scene)
     human_player: HumanPlayer = generate_human_player(name=human_player_name, role=human_player_role)
@@ -87,7 +87,7 @@ def init_game(human_player_name: str, reply_language_instruction: str = ''):
 
     r = connect_to_redis()
     save_game_to_redis(r, game)
-    return game.id
+    return game.id, human_player.role
 
 
 # Sequential execution is super slow
@@ -134,7 +134,6 @@ def get_welcome_messages_from_all_players_async(game_id: str):
             assistant_id=player.assistant_id, old_thread_id=player.thread_id
         )
         answer = player_assistant.ask("Game Master: Please introduce yourself to the other players.")
-        print("ping")
         return f"{player.name}: {answer}"
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -225,6 +224,7 @@ def start_elimination_vote_round_one(game_id: str, user_vote: str) -> List[str]:
     _, new_offset = add_message_to_game_history_redis_list(r, game_id, [voting_result_message])
     game.current_offset = new_offset
     save_game_to_redis(r, game)
+    logger.info("Arbiter: Results of round 1 voting: %s", leaders_str)
     return leaders
 
 
@@ -255,27 +255,31 @@ def ask_bot_player_to_speak_for_themself_after_first_round_voting(game_id: str, 
 def let_human_player_to_speak_for_themself(game_id: str, user_message: str) -> None:
     r = connect_to_redis()
     add_message_to_game_history_redis_list(r, game_id, [user_message])
+    logger.info('User: %s', user_message) # todo: use the user name form game object
 
 
-def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote: str):
+# todo: move reply_language_instruction to Player in Redis
+def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote: str, reply_language_instruction):
     logger.info("*** Time to vote again! ***")
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
 
     names = Counter([user_vote])
+    bot_assistants = {}
     for player in game.bot_players.values():
         new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(
             r, game_id, player.current_offset + 1
         )
         new_messages_for_player_concatenated = '\n'.join(new_messaged_for_player)
         voting_instruction = GAME_MASTER_VOTING_SECOND_ROUND_COMMAND.format(
-            leaders=','.join(leaders),
+            leaders=','.join([leader for leader in leaders if leader != player.name]),
             latest_messages=new_messages_for_player_concatenated
         )
         player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
             assistant_id=player.assistant_id, old_thread_id=player.thread_id
         )
+        bot_assistants[player.name] = player_assistant
         answer = player_assistant.ask(voting_instruction)
         voting_response_json = json.loads(answer)
         voting_result = VotingResponse(name=voting_response_json['player_to_eliminate'],
@@ -284,13 +288,48 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
         player.current_offset = new_offset
 
     leader = get_top_items_within_range(counter=names, min_count=1, max_count=1)[0]
+    save_game_to_redis(r, game)
+
     if leader == game.human_player.name:
+        logger.info("Human player %s was eliminated", leader)
+        logger.info("*** GAME OVER ***")
         return "GAME OVER"
     else:
         bot_player_to_eliminate = game.bot_players[leader]
-        message_to_all = GAME_MASTER_VOTING_SECOND_ROUND_RESULT.format(leader=leader, role=bot_player_to_eliminate.role)
+        message_to_all = GAME_MASTER_VOTING_SECOND_ROUND_RESULT.format(
+            leader=leader, role=bot_player_to_eliminate.role.value,
+        )
         add_message_to_game_history_redis_list(r, game_id, [message_to_all])
-    # todo: update the game state and instructions
+        logger.info(message_to_all)
+
+        bot_player_to_eliminate.is_alive = False
+        alive_players = [bot_player for name, bot_player in game.bot_players.items() if bot_player.is_alive]
+        dead_players = [bot_player for name, bot_player in game.bot_players.items() if not bot_player.is_alive]
+        dead_players_names_with_roles = ','.join([f"{bot_player.name} ({bot_player.role.value})" for bot_player in dead_players])
+
+        for current_bot_player in alive_players:
+            if current_bot_player.is_alive:
+                current_bot_player.is_alive = False
+                other_player_names = ','.join([player.name for player in alive_players if player.name != current_bot_player.name])
+                other_player_names += f",{game.human_player.name}"
+                bot_assistant = bot_assistants[current_bot_player.name]
+                bot_assistant.update_player_instruction(
+                    player=current_bot_player,
+                    game_story=game.story,
+                    players_names=other_player_names,
+                    dead_players_names_with_roles=dead_players_names_with_roles + '\n',
+                    reply_language_instruction=reply_language_instruction
+                )
+
+        arbiter = ArbiterAssistantDecorator.load_arbiter_by_assistant_id_and_thread_id(
+            assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
+        )
+        arbiter.update_arbiter_instruction(
+            players=[bot_player for bot_player in alive_players if bot_player.is_alive],
+            game_story=game.story,
+            human_player_name=game.human_player.name
+        )
+        return message_to_all
 
 
 def start_game_night(game_id, user_action: str):
@@ -298,6 +337,8 @@ def start_game_night(game_id, user_action: str):
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
+
+    sorted_roles = sorted(role_order_map.items(), key=lambda x: x[1])
 
     # if user_action == 'kill':
 
@@ -333,8 +374,3 @@ def get_latest_game():
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     return read_newest_game_from_redis(r)
-
-
-if __name__ == '__main__':
-    game_id = get_latest_game().id
-    start_elimination_vote_round_two(user_vote="Whisper", leaders=["Whisper", "Clayton"], game_id=game_id)
