@@ -30,7 +30,7 @@ def _setup_logger(log_level=logging.DEBUG):
 
     # Create file handler which logs even debug messages
     file_handler = logging.handlers.RotatingFileHandler(
-        'my_application.log', maxBytes=20 * 1024 * 1024, backupCount=5
+        '20-Feb-2024-spaceship.txt', maxBytes=20 * 1024 * 1024, backupCount=5
     )
     file_handler.setLevel(logging.INFO)
 
@@ -291,7 +291,7 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
     save_game_to_redis(r, game)
 
     if leader == game.human_player.name:
-        logger.info("Human player %s was eliminated", leader)
+        logger.info("Arbiter: Human player %s was eliminated", leader)
         logger.info("*** GAME OVER ***")
         return "GAME OVER"
     else:
