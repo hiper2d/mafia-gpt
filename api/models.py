@@ -78,6 +78,7 @@ class Game(BaseModel):
     user_moves_day_counter: int = 0
     user_moves_total_counter: int = 0
     is_active: bool = True
+    reply_language_instruction: str
 
 
 class ArbiterReply(BaseModel):

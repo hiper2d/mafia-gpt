@@ -4,7 +4,7 @@ import logging
 import logging.handlers
 import uuid
 from collections import Counter
-from typing import List
+from typing import List, Tuple
 
 from dotenv import load_dotenv, find_dotenv
 
@@ -30,7 +30,7 @@ def _setup_logger(log_level=logging.DEBUG):
 
     # Create file handler which logs even debug messages
     file_handler = logging.handlers.RotatingFileHandler(
-        '20-Feb-2024-spaceship.txt', maxBytes=20 * 1024 * 1024, backupCount=5
+        'log.txt', maxBytes=20 * 1024 * 1024, backupCount=5
     )
     file_handler.setLevel(logging.INFO)
 
@@ -82,7 +82,8 @@ def init_game(human_player_name: str, theme: str, reply_language_instruction: st
         bot_players=bot_players,
         human_player=human_player,
         arbiter_assistant_id=new_arbiter.assistant.id,
-        arbiter_thread_id=new_arbiter.thread.id
+        arbiter_thread_id=new_arbiter.thread.id,
+        reply_language_instruction=reply_language_instruction
     )
 
     r = connect_to_redis()
@@ -90,35 +91,11 @@ def init_game(human_player_name: str, theme: str, reply_language_instruction: st
     return game.id, human_player.role
 
 
-# Sequential execution is super slow
+# This function for local testing only. When deployed to AWS Lambda, it should call other lambdas for each player
+# rather than using threads
 # todo: change the welcoming logic:
 # randomly pick the order in which players will introduce themselves
 # ask players to introduce themselves in the order, and make them hear what other players said before them
-def get_welcome_messages_from_all_players(game_id: str):
-    logger.info('Players introduction:')
-    load_dotenv(find_dotenv())
-
-    r = connect_to_redis()
-    game: Game = load_game_from_redis(r, game_id)
-    if not game or not game.bot_players:
-        logger.debug(f"Game with id {game_id} not found in Redis")
-        return
-
-    all_introductions = []
-    for player in game.bot_players.values():
-        player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
-            assistant_id=player.assistant_id, old_thread_id=player.thread_id
-        )
-        answer = player_assistant.ask("Please introduce yourself to the other players.")
-        all_introductions.append(f"{player.name}: {answer}")
-
-    add_message_to_game_history_redis_list(r, game_id, all_introductions)
-    logger.info("*** Day 1 begins! ***")
-    return all_introductions
-
-
-# This function for local testing only. When deployed to AWS Lambda, it should call other lambdas for each player
-# rather than using threads
 def get_welcome_messages_from_all_players_async(game_id: str):
     logger.info('Players introduction:')
     load_dotenv(find_dotenv())
@@ -147,19 +124,17 @@ def get_welcome_messages_from_all_players_async(game_id: str):
 
 def talk_to_all(game_id: str, user_message: str):
     load_dotenv(find_dotenv())
-    logger.info('User: %s', user_message)
-
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
+    logger.info('%s: %s', game.human_player.name, user_message)
 
     arbiter = ArbiterAssistantDecorator.load_arbiter_by_assistant_id_and_thread_id(
         assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
     )
     add_message_to_game_history_redis_list(r, game_id, [
-        'User: ' + user_message])  # todo: human player name should be pulled from the game object
+        f"{game.human_player.name}: " + user_message])
 
-    new_messages, new_offset = read_messages_from_game_history_redis_list(r, game_id, game.current_offset + 1)
-    new_messages_concatenated = '\n'.join(new_messages)
+    new_messages_concatenated, new_offset = _get_new_messages_as_str(r, game_id, game.current_offset)
     arbiter_reply = arbiter.ask(new_messages_concatenated)
     game.current_offset = new_offset
     game.user_moves_total_counter += 1
@@ -177,11 +152,8 @@ def talk_to_certain_player(game_id: str, name: str):
         return None
     bot_player = game.bot_players[name]
 
-    new_messaged_for_player, _ = read_messages_from_game_history_redis_list(
-        r, game_id, bot_player.current_offset + 1
-    )
-    new_messages_for_player_concatenated = '\n'.join(new_messaged_for_player)
-    message = f"Game Master: Reply to these few messages from other players:\n{new_messages_for_player_concatenated}"
+    new_messages_concatenated, _ = _get_new_messages_as_str(r, game_id, bot_player.current_offset)
+    message = f"Game Master: Reply to these few messages from other players:\n{new_messages_concatenated}"
     player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
         assistant_id=bot_player.assistant_id, thread_id=bot_player.thread_id
     )
@@ -193,20 +165,18 @@ def talk_to_certain_player(game_id: str, name: str):
     return player_reply
 
 
-def start_elimination_vote_round_one(game_id: str, user_vote: str) -> List[str]:
+def start_elimination_vote_round_one_async(game_id: str, user_vote: str) -> List[str]:
     logger.info("*** Time to vote! ***")
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
 
     names = Counter([user_vote])
-    for player in game.bot_players.values():
-        new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(
-            r, game_id, player.current_offset + 1
-        )
-        new_messages_for_player_concatenated = '\n'.join(new_messaged_for_player)
+
+    def get_voting_result(player):
+        new_messages_concatenated, _ = _get_new_messages_as_str(r, game_id, player.current_offset)
         voting_instruction = GAME_MASTER_VOTING_FIRST_ROUND_COMMAND.format(
-            latest_messages=new_messages_for_player_concatenated
+            latest_messages=new_messages_concatenated
         )
         player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
             assistant_id=player.assistant_id, old_thread_id=player.thread_id
@@ -215,8 +185,14 @@ def start_elimination_vote_round_one(game_id: str, user_vote: str) -> List[str]:
         voting_response_json = json.loads(answer)
         voting_result = VotingResponse(name=voting_response_json['player_to_eliminate'],
                                        reason=voting_response_json['reason'])
-        names[voting_result.name] += 1
         player.current_offset = new_offset
+        return voting_result
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future_to_player = {executor.submit(get_voting_result, player): player for player in game.bot_players.values()}
+        for future in concurrent.futures.as_completed(future_to_player):
+            voting_result = future.result()
+            names[voting_result.name] += 1
 
     leaders = get_top_items_within_range(counter=names, min_count=2, max_count=3)
     leaders_str = ', '.join(leaders)
@@ -235,11 +211,9 @@ def ask_bot_player_to_speak_for_themself_after_first_round_voting(game_id: str, 
         return None
     player = game.bot_players[name]
 
-    new_messaged_for_player, _ = read_messages_from_game_history_redis_list(
-        r, game_id, player.current_offset + 1)
-    new_messages_for_player_concatenated = '\n'.join(new_messaged_for_player)
+    new_messages_concatenated, _ = _get_new_messages_as_str(r, game_id, player.current_offset)
     message = GAME_MASTER_VOTING_FIRST_ROUND_DEFENCE_COMMAND.format(
-        latest_messages=new_messages_for_player_concatenated
+        latest_messages=new_messages_concatenated
     )
     player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
         assistant_id=player.assistant_id, thread_id=player.thread_id
@@ -254,12 +228,12 @@ def ask_bot_player_to_speak_for_themself_after_first_round_voting(game_id: str, 
 
 def let_human_player_to_speak_for_themself(game_id: str, user_message: str) -> None:
     r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
     add_message_to_game_history_redis_list(r, game_id, [user_message])
-    logger.info('User: %s', user_message) # todo: use the user name form game object
+    logger.info("%s: %s", game.human_player.name, user_message)
 
 
-# todo: move reply_language_instruction to Player in Redis
-def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote: str, reply_language_instruction):
+def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote: str):
     logger.info("*** Time to vote again! ***")
     load_dotenv(find_dotenv())
     r = connect_to_redis()
@@ -267,14 +241,12 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
 
     names = Counter([user_vote])
     bot_assistants = {}
-    for player in game.bot_players.values():
-        new_messaged_for_player, new_offset = read_messages_from_game_history_redis_list(
-            r, game_id, player.current_offset + 1
-        )
-        new_messages_for_player_concatenated = '\n'.join(new_messaged_for_player)
+
+    def get_voting_result(player):
+        new_messages_concatenated, new_offset = _get_new_messages_as_str(r, game_id, player.current_offset)
         voting_instruction = GAME_MASTER_VOTING_SECOND_ROUND_COMMAND.format(
-            leaders=','.join([leader for leader in leaders if leader != player.name]),
-            latest_messages=new_messages_for_player_concatenated
+            leaders=','.join([lead for lead in leaders if lead != player.name]),
+            latest_messages=new_messages_concatenated
         )
         player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
             assistant_id=player.assistant_id, old_thread_id=player.thread_id
@@ -282,10 +254,14 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
         bot_assistants[player.name] = player_assistant
         answer = player_assistant.ask(voting_instruction)
         voting_response_json = json.loads(answer)
-        voting_result = VotingResponse(name=voting_response_json['player_to_eliminate'],
-                                       reason=voting_response_json['reason'])
-        names[voting_result.name] += 1
         player.current_offset = new_offset
+        return voting_response_json['player_to_eliminate']
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_voting_result, player) for player in game.bot_players.values()]
+        for future in concurrent.futures.as_completed(futures):
+            player_to_eliminate = future.result()
+            names[player_to_eliminate] += 1
 
     leader = get_top_items_within_range(counter=names, min_count=1, max_count=1)[0]
     save_game_to_redis(r, game)
@@ -318,7 +294,7 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
                     game_story=game.story,
                     players_names=other_player_names,
                     dead_players_names_with_roles=dead_players_names_with_roles + '\n',
-                    reply_language_instruction=reply_language_instruction
+                    reply_language_instruction=game.reply_language_instruction
                 )
 
         arbiter = ArbiterAssistantDecorator.load_arbiter_by_assistant_id_and_thread_id(
@@ -374,3 +350,9 @@ def get_latest_game():
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     return read_newest_game_from_redis(r)
+
+
+def _get_new_messages_as_str(r, game_id, current_offset) -> Tuple[str, int]:
+    new_messages, new_offset = read_messages_from_game_history_redis_list(r, game_id, current_offset + 1)
+    new_messages_concatenated = '\n'.join(new_messages) if new_messages else 'no new messages'
+    return new_messages_concatenated, new_offset

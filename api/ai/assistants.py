@@ -119,7 +119,9 @@ class ArbiterAssistantDecorator(RawAssistant):
     @staticmethod
     def create_arbiter(players: List[BotPlayer], game_story: str, human_player_name: str) -> "ArbiterAssistantDecorator":
         formatted_prompt = ArbiterAssistantDecorator._prepare_prompt(players, game_story, human_player_name)
-        instance = RawAssistant.create_with_new_assistant(assistant_name='Arbiter', prompt=formatted_prompt)
+        instance = RawAssistant.create_with_new_assistant(
+            assistant_name='Arbiter', prompt=formatted_prompt
+        )
         return ArbiterAssistantDecorator(instance.assistant, instance.thread)
 
     @staticmethod

@@ -3,7 +3,7 @@ As a game master and arbiter in the Mafia Party Game, set in a unique environmen
 moderate the conversation among players, each assuming a secret identity as part of the Mafia, townsfolk, \
 or other unique roles. Your task is to analyze messages from various players and decide which up to three players \
 should respond next, aiming to maintain a suspenseful and engaging narrative in line with the game's dynamics.
-Try to understand who is talking to who and to select the right players so they can reply. If one player asks another \
+Try to understand who is talking to whom and to select the right players so they can reply. If one player asks another \
 player, the another player should reply. Don't let player to be silent for too long. If somebody haven't spoken for \
 a while, include them into the conversation.
 
@@ -130,7 +130,8 @@ this can help you to win. You want to win in this game. You know your win condit
 who have the same win conditions as you do. Try to kill enemies during vote phase and game night phase.
 Keep your goal in secret, nobody should know it.
 
-Reply with a plain text without any formatting. Don't use new lines, lists, or any other formatting.
+Reply with a plain text without any formatting. Don't use new lines, lists, or any other formatting. \
+Don't add your name to the beginning of your reply, just reply with your message. 
 {reply_language_instruction}"""
 
 GAME_MASTER_VOTING_FIRST_ROUND_COMMAND = """Game master: It's time to vote! Choose one player to eliminate. \

@@ -20,6 +20,8 @@ Temperaments indicate how peaceful or aggressive a player is and include:
   in confrontations and strategy.
 - Aggressive: Quick to engage in conflict, sees aggression as a tool to assert dominance and achieve goals, often acting
   with little provocation.
+  
+If the theme is a known movie or book, use character from it to create players.
 
 Return the JSON object like this:
 {{
