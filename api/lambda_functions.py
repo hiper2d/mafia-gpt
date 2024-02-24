@@ -19,6 +19,8 @@ from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_ga
     delete_game_from_redis, read_newest_game_from_redis
 from api.utils import get_top_items_within_range
 
+NO_NEW_MESSAGES = 'no new messages'
+
 
 def _setup_logger(log_level=logging.DEBUG):
     logger = logging.getLogger('my_application')
@@ -61,8 +63,8 @@ def init_game(human_player_name: str, theme: str, reply_language_instruction: st
     logger.info("Game Scene: %s\n", game_scene)
     human_player: HumanPlayer = generate_human_player(name=human_player_name, role=human_player_role)
 
-    for current_player_id, current_player in bot_players.items():
-        other_players = [bot_player for bot_player in bot_players.values() if bot_player.id != current_player.id]
+    for current_player_name, current_player in bot_players.items():
+        other_players = [bot_player for bot_player in bot_players.values() if bot_player.name != current_player_name]
         new_player_assistant = PlayerAssistantDecorator.create_player(
             player=current_player,
             game_story=game_scene,
@@ -120,6 +122,25 @@ def get_welcome_messages_from_all_players_async(game_id: str):
     add_message_to_game_history_redis_list(r, game_id, all_introductions)
     logger.info("*** Day 1 begins! ***")
     return all_introductions
+
+
+def ask_everybody_to_introduce_themself_in_order(game_id: str):
+    r = connect_to_redis()
+    game: Game = load_game_from_redis(r, game_id)
+
+    for bot_player in game.bot_players.values():
+        new_messages_concatenated, _ = _get_new_messages_as_str(r, game_id, bot_player.current_offset)
+        message = f"Game Master: Introduce yourself to other players."
+        if new_messages_concatenated != NO_NEW_MESSAGES:
+            message += f"There are few new messages in the chat:\n{new_messages_concatenated}"
+        player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_and_thread_id(
+            assistant_id=bot_player.assistant_id, thread_id=bot_player.thread_id
+        )
+        player_reply = player_assistant.ask(message)
+        player_reply_message = f"{bot_player.name}: {player_reply}"
+        _, new_offset = add_message_to_game_history_redis_list(r, game_id, [player_reply_message])
+        bot_player.current_offset = new_offset
+        save_game_to_redis(r, game)
 
 
 def talk_to_all(game_id: str, user_message: str):
@@ -354,5 +375,5 @@ def get_latest_game():
 
 def _get_new_messages_as_str(r, game_id, current_offset) -> Tuple[str, int]:
     new_messages, new_offset = read_messages_from_game_history_redis_list(r, game_id, current_offset + 1)
-    new_messages_concatenated = '\n'.join(new_messages) if new_messages else 'no new messages'
+    new_messages_concatenated = '\n'.join(new_messages) if new_messages else ('%s' % NO_NEW_MESSAGES)
     return new_messages_concatenated, new_offset

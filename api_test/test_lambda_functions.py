@@ -5,7 +5,7 @@ from api.lambda_functions import init_game, delete_assistants_from_openai_and_ga
     get_welcome_messages_from_all_players_async, talk_to_all, delete_assistants_from_openai_by_name, get_latest_game, \
     start_elimination_vote_round_one_async, talk_to_certain_player, \
     ask_bot_player_to_speak_for_themself_after_first_round_voting, start_elimination_vote_round_two, \
-    let_human_player_to_speak_for_themself
+    let_human_player_to_speak_for_themself, ask_everybody_to_introduce_themself_in_order
 
 
 class TestGameFunctions(unittest.TestCase):
@@ -15,8 +15,14 @@ class TestGameFunctions(unittest.TestCase):
             theme='Hunger Games',
             # reply_language_instruction='Reply in russian to me but keep original names (in English). Отвечай на русском, но сохрани оригинальные имена на английском.'
         )
-        print(f"Human Player Role: {human_player_role}")
-        get_welcome_messages_from_all_players_async(game_id=game_id)
+        print(f"Human Player Role: {human_player_role.value}")
+
+        # The async version is much faster but all introductions are independent. I more like the second approach
+        # which makes bots to introduce themselves in order knowing what had been said before them. Bot it is slow.
+        # I think, later I can ask bots to introduce themselves from UI one by one.
+
+        # get_welcome_messages_from_all_players_async(game_id=game_id)
+        ask_everybody_to_introduce_themself_in_order(game_id=game_id)  # second slow approach
 
     def test_get_welcome_messages_from_all_players_async(self):
         game_id = get_latest_game().id
