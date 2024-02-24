@@ -1,5 +1,7 @@
 # Mafia with AI
 
+<img src="images/mafia-logo.png" width="600">
+
 I'm building the [Mafia party-game](https://en.wikipedia.org/wiki/Mafia_(party_game)) with AI bots. There is no UI yet,
 it's a console version. It looks like this:
 

@@ -61,13 +61,13 @@ def init_game(human_player_name: str, theme: str, reply_language_instruction: st
     logger.info("Game Scene: %s\n", game_scene)
     human_player: HumanPlayer = generate_human_player(name=human_player_name, role=human_player_role)
 
-    all_players_names = [human_player_name] + [player.name for player in bot_players.values()]
     for current_player_id, current_player in bot_players.items():
-        other_players_names = [name for name in all_players_names if name != current_player.name]
+        other_players = [bot_player for bot_player in bot_players.values() if bot_player.id != current_player.id]
         new_player_assistant = PlayerAssistantDecorator.create_player(
             player=current_player,
             game_story=game_scene,
-            players_names=','.join(other_players_names),
+            other_players=other_players,
+            human_player=human_player,
             reply_language_instruction=reply_language_instruction
         )
         current_player.assistant_id = new_player_assistant.assistant.id
@@ -279,21 +279,21 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
         logger.info(message_to_all)
 
         bot_player_to_eliminate.is_alive = False
-        alive_players = [bot_player for name, bot_player in game.bot_players.items() if bot_player.is_alive]
-        dead_players = [bot_player for name, bot_player in game.bot_players.items() if not bot_player.is_alive]
-        dead_players_names_with_roles = ','.join([f"{bot_player.name} ({bot_player.role.value})" for bot_player in dead_players])
+        alive_bot_players = [bot_player for name, bot_player in game.bot_players.items() if bot_player.is_alive]
+        dead_bot_players = [bot_player for name, bot_player in game.bot_players.items() if not bot_player.is_alive]
+        dead_bot_players_names_with_roles = ','.join([f"{bot_player.name} ({bot_player.role.value})" for bot_player in dead_bot_players])
 
-        for current_bot_player in alive_players:
+        for current_bot_player in alive_bot_players:
             if current_bot_player.is_alive:
                 current_bot_player.is_alive = False
-                other_player_names = ','.join([player.name for player in alive_players if player.name != current_bot_player.name])
-                other_player_names += f",{game.human_player.name}"
                 bot_assistant = bot_assistants[current_bot_player.name]
+                other_bot_players = [bot_player for bot_player in alive_bot_players if bot_player.name != current_bot_player.name]
                 bot_assistant.update_player_instruction(
                     player=current_bot_player,
                     game_story=game.story,
-                    players_names=other_player_names,
-                    dead_players_names_with_roles=dead_players_names_with_roles + '\n',
+                    other_players=other_bot_players,
+                    human_player=game.human_player,
+                    dead_players_names_with_roles=dead_bot_players_names_with_roles + '\n',
                     reply_language_instruction=game.reply_language_instruction
                 )
 
@@ -301,7 +301,7 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
             assistant_id=game.arbiter_assistant_id, thread_id=game.arbiter_thread_id
         )
         arbiter.update_arbiter_instruction(
-            players=[bot_player for bot_player in alive_players if bot_player.is_alive],
+            players=[bot_player for bot_player in alive_bot_players if bot_player.is_alive],
             game_story=game.story,
             human_player_name=game.human_player.name
         )

@@ -1,12 +1,12 @@
 import logging
 import time
-from typing import Optional, List
+from typing import Optional, List, Tuple, Set
 
 from openai import OpenAI
 from openai.types.beta import Assistant, Thread
 
 from api.ai.assistant_prompts import PLAYER_PROMPT, ARBITER_PROMPT
-from api.models import BotPlayer, MafiaRole
+from api.models import BotPlayer, MafiaRole, HumanPlayer
 
 logger = logging.getLogger('my_application')
 
@@ -153,20 +153,22 @@ class PlayerAssistantDecorator(RawAssistant):
     def __init__(self, assistant: Assistant, thread: Thread):
         super().__init__(assistant, thread)
 
-    def update_player_instruction(self, player: BotPlayer, game_story: str, players_names: str,
-                           dead_players_names_with_roles: str, reply_language_instruction: str):
+    def update_player_instruction(self, player: BotPlayer, game_story: str, other_players: List[BotPlayer],
+                                  human_player: HumanPlayer, dead_players_names_with_roles: str,
+                                  reply_language_instruction: str):
         new_instruction = self._prepare_prompt(
-            player=player, game_story=game_story, players_names=players_names,
+            player=player, game_story=game_story, other_players=other_players,
             dead_players_names_with_roles=dead_players_names_with_roles,
-            reply_language_instruction=reply_language_instruction
+            reply_language_instruction=reply_language_instruction, human_player=human_player
         )
         super().update_instruction(new_instruction)
 
     @classmethod
-    def create_player(cls, player: BotPlayer, game_story: str, players_names: str,
-                      reply_language_instruction: str) -> "PlayerAssistantDecorator":
+    def create_player(cls, player: BotPlayer, game_story: str, other_players: List[BotPlayer],
+                      human_player: HumanPlayer, reply_language_instruction: str) -> "PlayerAssistantDecorator":
         formatted_prompt = cls._prepare_prompt(
-            player, game_story, players_names, "Empty", reply_language_instruction
+            player=player, game_story=game_story, other_players=other_players, human_player=human_player,
+            dead_players_names_with_roles="Empty", reply_language_instruction=reply_language_instruction
         )
         raw_assistant = cls.create_with_new_assistant(assistant_name=player.name, prompt=formatted_prompt)
         return cls(raw_assistant.assistant, raw_assistant.thread)
@@ -183,25 +185,45 @@ class PlayerAssistantDecorator(RawAssistant):
         return cls(raw_assistant.assistant, raw_assistant.thread)
 
     @staticmethod
-    def _prepare_prompt(player: BotPlayer, game_story: str, players_names: str, dead_players_names_with_roles: str,
-                        reply_language_instruction: str) -> str:
+    def _prepare_prompt(player: BotPlayer, game_story: str, other_players: List[BotPlayer], human_player: HumanPlayer,
+                        dead_players_names_with_roles: str, reply_language_instruction: str) -> str:
+        other_player_names = set([op.name for op in other_players if op.name != player.name])
+        other_player_names.add(human_player.name)
+        other_players_roles_but_mafia = set([op.role.value for op in other_players if op.role not in [MafiaRole.MAFIA, player.role]])
+        if human_player.role != MafiaRole.MAFIA:
+            other_players_roles_but_mafia.add(MafiaRole.MAFIA.value)
+
         def get_win_condition(p: BotPlayer):
             if p.role == MafiaRole.MAFIA:
                 return "You win if the Mafia members are the majority of the remaining players."
             else:
                 return "You win if all the Mafia members are eliminated."
 
-        def get_ally_roles(p: BotPlayer):
+        def get_ally_roles_as_str(p: BotPlayer) -> str:
             if p.role == MafiaRole.MAFIA:
-                return [MafiaRole.MAFIA]
+                return MafiaRole.MAFIA.value
             else:
-                return [MafiaRole.VILLAGER, MafiaRole.DOCTOR, MafiaRole.DETECTIVE, MafiaRole.ESCORT]
+                return ', '.join(other_players_roles_but_mafia)
 
-        def get_enemy_roles(p: BotPlayer):
+        def get_enemy_roles_as_str(p: BotPlayer) -> str:
             if p.role == MafiaRole.MAFIA:
-                return [MafiaRole.VILLAGER, MafiaRole.DOCTOR, MafiaRole.DETECTIVE, MafiaRole.ESCORT]
+                return ', '.join(other_players_roles_but_mafia)
             else:
-                return [MafiaRole.MAFIA]
+                return MafiaRole.MAFIA.value
+
+        def get_known_allies_as_str(p: BotPlayer) -> str:
+            if p.role == MafiaRole.MAFIA:
+                other_mafia_names = [op.name for op in other_players if op.role == MafiaRole.MAFIA]
+                if human_player == MafiaRole.MAFIA:
+                    other_mafia_names.append(human_player.name)
+                if len(other_mafia_names) > 1:
+                    return f"You know that {', '.join(other_mafia_names)} are other Mafia members and your alies."
+                elif len(other_mafia_names) == 1:
+                    return f"You know that {other_mafia_names[0]} is another Mafia member and your ally."
+                else:
+                    return "You don't know any alies, your are the only mafia player in the game."
+            else:
+                return "You don't know any alies yet"
 
         return PLAYER_PROMPT.format(
             name=player.name,
@@ -210,10 +232,12 @@ class PlayerAssistantDecorator(RawAssistant):
             role_motivation=player.role_motivation,
             temperament=player.temperament,
             game_story=game_story,
-            players_names=players_names,
+            players_names=', '.join(other_player_names),
             dead_players_names_with_roles=dead_players_names_with_roles,
             win_condition=get_win_condition(player),
-            ally_roles=get_ally_roles(player),
-            enemy_roles=get_enemy_roles(player),
+            ally_roles=get_ally_roles_as_str(player),
+            enemy_roles=get_enemy_roles_as_str(player),
+            known_allies=get_known_allies_as_str(player),
+            known_enemies="All you enemies are unknown to you.",
             reply_language_instruction=reply_language_instruction
         )
