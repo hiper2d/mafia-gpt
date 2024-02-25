@@ -1,3 +1,4 @@
+# todo: Update characters to be more game specific
 GAME_GENERATION_PROMPT = """\
 You have the following theme: {theme}.
 
@@ -13,15 +14,17 @@ All names must be one word names.
 
 Temperaments indicate how peaceful or aggressive a player is and include:
 
-- Shy: Exhibits fear and apprehension towards others, afraid of confrontation and scared by the prospect of being
-  harmed. Tends to avoid the spotlight and feels uncomfortable around aggressive players.
-- Proactive: Combines confidence, risk-taking, and a desire to lead or control situations. Characters with this
-  temperament are assertive, bold in their actions, and seek to dominate their environment, often taking the initiative
-  in confrontations and strategy.
-- Aggressive: Quick to engage in conflict, sees aggression as a tool to assert dominance and achieve goals, often acting
-  with little provocation.
+- Shy: Exhibits fear and apprehension towards others, afraid of confrontation and scared by the prospect of being \
+harmed. Tends to avoid the spotlight and feels uncomfortable around aggressive players
+- Proactive: Combines confidence, risk-taking, and a desire to lead or control situations. Characters with this \
+temperament are assertive, bold in their actions, and seek to dominate their environment, often taking the initiative \
+in confrontations and strategy
+- Aggressive Strategic Provocateur: uses aggressive tactics like accusation and intimidation not out of malice, \
+but as a calculated method to unearth truths and expose hidden motives, emphasizing that such behavior \
+is a strategic choice aimed at revealing the true intentions of others in a high-stakes environment
   
-If the theme is a known movie or book, use character from it to create players.
+If the theme is a known movie or book, use characters from the original source as prototypes for player characters \
+and keep the original names.
 
 Return the JSON object like this:
 {{

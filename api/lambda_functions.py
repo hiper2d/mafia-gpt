@@ -2,9 +2,10 @@ import concurrent.futures
 import json
 import logging
 import logging.handlers
+import random
 import uuid
-from collections import Counter
-from typing import List, Tuple
+from collections import Counter, defaultdict
+from typing import List, Tuple, Dict, Optional
 
 from dotenv import load_dotenv, find_dotenv
 
@@ -13,7 +14,7 @@ from api.ai.assistant_prompts import GAME_MASTER_VOTING_FIRST_ROUND_COMMAND, GAM
     GAME_MASTER_VOTING_SECOND_ROUND_RESULT
 from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator, RawAssistant
 from api.ai.text_generators import generate_scene_and_players, generate_human_player
-from api.models import Game, ArbiterReply, VotingResponse, MafiaRole, HumanPlayer, role_order_map
+from api.models import Game, ArbiterReply, VotingResponse, MafiaRole, HumanPlayer, role_order_map, BotPlayer
 from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
     add_message_to_game_history_redis_list, delete_game_history_redis_list, read_messages_from_game_history_redis_list, \
     delete_game_from_redis, read_newest_game_from_redis
@@ -225,7 +226,7 @@ def start_elimination_vote_round_one_async(game_id: str, user_vote: str) -> List
     return leaders
 
 
-def ask_bot_player_to_speak_for_themself_after_first_round_voting(game_id: str, name: str) -> str:
+def ask_bot_player_to_speak_for_themselves_after_first_round_voting(game_id: str, name: str) -> str:
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
     if name not in game.bot_players:
@@ -247,7 +248,7 @@ def ask_bot_player_to_speak_for_themself_after_first_round_voting(game_id: str, 
     return player_reply
 
 
-def let_human_player_to_speak_for_themself(game_id: str, user_message: str) -> None:
+def let_human_player_to_speak_for_themselves(game_id: str, user_message: str) -> None:
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
     add_message_to_game_history_redis_list(r, game_id, [user_message])
@@ -329,15 +330,34 @@ def start_elimination_vote_round_two(game_id: str, leaders: List[str], user_vote
         return message_to_all
 
 
-def start_game_night(game_id, user_action: str):
+# Later this logic should be on the client side
+def start_game_night(game_id, user_action: str = None):
     logger.info("*** Night begins! ***")
     load_dotenv(find_dotenv())
     r = connect_to_redis()
     game: Game = load_game_from_redis(r, game_id)
 
-    sorted_roles = sorted(role_order_map.items(), key=lambda x: x[1])
+    alive_bot_players = [bot_player for bot_player in game.bot_players.values() if bot_player.is_alive]
+    role_to_player_map = defaultdict(list)
+    for player in alive_bot_players:
+        role_to_player_map[player.role].append(player)
+    if game.human_player.role != MafiaRole.VILLAGER:
+        role_to_player_map[game.human_player.role].append(game.human_player)
+    print([f"{role}: {[p.name for p in players]}" for role, players in role_to_player_map.items()])
 
-    # if user_action == 'kill':
+    def get_random_role_member(role: MafiaRole) -> Optional[BotPlayer]:
+        if role in role_to_player_map:
+            return random.choice(role_to_player_map[role]) if len(role_to_player_map[role]) > 1 else role_to_player_map[role][0]
+
+    sorted_roles: List[Tuple[MafiaRole, int]] = sorted(role_order_map.items(), key=lambda x: x[1])
+    for role, _ in sorted_roles:
+        current_player = get_random_role_member(role)
+        if current_player:
+            if current_player != game.human_player.name:
+                print(f"Player {current_player.name} with role {current_player.role} is making a move")
+            else:
+                print(f"Human player {current_player.name} with role {current_player.role} is making a move: {user_action}")
+            # todo: ask the player's assistant to make a move
 
 
 def delete_assistants_from_openai_and_game_from_redis(game_id: str):

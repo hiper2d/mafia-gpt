@@ -161,10 +161,15 @@ able to run locally as REST endpoints on a local web server). There is no client
         humans and to hide their true identity.
 
 
-- get_welcome_messages_from_all_players
+- get_welcome_messages_from_all_players_async
 
-        Asks each bot player to generate a welcome message. Return all messages in a list. I plan to merge it into
-        the `init_game` function.
+        Asks each bot player to generate a welcome message. All bots introduce themselves acynchronously
+
+
+- ask_everybody_to_introduce_themself_in_order
+
+        An alternative to the previous function, but players introduce themselves one by one. Each next player 
+        know what previous plyaers said and can reference them 
 
 
 - talk_to_all
@@ -184,7 +189,7 @@ able to run locally as REST endpoints on a local web server). There is no client
         This lambda is called after the `talk_to_all` function by the client to get actual reponses from the bot-players
 
 
-- start_elimination_vote_round_one
+- start_elimination_vote_round_one_async
 
         This function asks each player-bot to vote. They must provide one name and a reson for debugging purposes.
         The function calculates 2-3 leaders and adds a message to the Redis list history to everyone about the first
@@ -192,13 +197,15 @@ able to run locally as REST endpoints on a local web server). There is no client
 
         The function received a user_message which is a vote for a player.
 
+        The voting is a secret at the moment. It should be open in future but I need to think how to decide on the order
 
-- ask_bot_player_to_speak_for_themself_after_first_round_voting
+
+- ask_bot_player_to_speak_for_themselves_after_first_round_voting
 
         A bot-player who is a leader is beang asked to speak for themself after the first round of voting.
 
 
-- let_human_player_to_speak_for_themself
+- let_human_player_to_speak_for_themselves
 
         Same as the previous function but for a human player.
 
