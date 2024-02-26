@@ -172,8 +172,16 @@ GAME_MASTER_VOTING_SECOND_ROUND_RESULT = """\
 Game Master: You decided to eliminate the following player {leader}. This player had a role of {role}. \
 Now it is time to start the night."""
 
-GAME_MASTER_NIGHT_MAFIA_COMMAND = """\
-Game Master: tbd
+GAME_MASTER_NIGHT_DOCTOR_COMMAND = """
+Game Master: Choose a player you are going to eliminate from the game. You must to choose somebody even if you \
+don't see a reason. You cannot choose yourself or nobody.
+"""
+
+GAME_MASTER_NIGHT_MAFIA_COMMAND = """
+Game Master: Choose a player you are going to eliminate from the game. You must to choose somebody even if you \
+don't see a reason. You cannot choose yourself or nobody.
+
+Pro
 """
 
 GAME_MASTER_NIGHT_DETECTIVE_COMMAND = """\

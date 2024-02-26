@@ -9,6 +9,7 @@ from typing import List, Tuple, Dict, Optional
 
 from dotenv import load_dotenv, find_dotenv
 
+from api.ai.actions.role.role_dictionary import ROLE_DICTIONARY
 from api.ai.assistant_prompts import GAME_MASTER_VOTING_FIRST_ROUND_COMMAND, GAME_MASTER_VOTING_FIRST_ROUND_RESULT, \
     GAME_MASTER_VOTING_FIRST_ROUND_DEFENCE_COMMAND, GAME_MASTER_VOTING_SECOND_ROUND_COMMAND, \
     GAME_MASTER_VOTING_SECOND_ROUND_RESULT
@@ -345,19 +346,31 @@ def start_game_night(game_id, user_action: str = None):
         role_to_player_map[game.human_player.role].append(game.human_player)
     print([f"{role}: {[p.name for p in players]}" for role, players in role_to_player_map.items()])
 
-    def get_random_role_member(role: MafiaRole) -> Optional[BotPlayer]:
+    def get_random_role_group_member(role: MafiaRole) -> Optional[BotPlayer]:
         if role in role_to_player_map:
             return random.choice(role_to_player_map[role]) if len(role_to_player_map[role]) > 1 else role_to_player_map[role][0]
+        else:
+            print("You should not be here")
 
-    sorted_roles: List[Tuple[MafiaRole, int]] = sorted(role_order_map.items(), key=lambda x: x[1])
-    for role, _ in sorted_roles:
-        current_player = get_random_role_member(role)
+    # sorted_roles: List[Tuple[MafiaRole, int]] = sorted(role_order_map.items(), key=lambda x: x[1])
+    for dictionary_role in ROLE_DICTIONARY:
+        current_player = get_random_role_group_member(dictionary_role.role)
         if current_player:
             if current_player != game.human_player.name:
                 print(f"Player {current_player.name} with role {current_player.role} is making a move")
             else:
-                print(f"Human player {current_player.name} with role {current_player.role} is making a move: {user_action}")
-            # todo: ask the player's assistant to make a move
+                role_action_command_for_current_player = dictionary_role.get_command()
+                player_assistant = PlayerAssistantDecorator.load_player_by_assistant_id_with_new_thread(
+                    assistant_id=current_player.assistant_id, old_thread_id=current_player.thread_id
+                )
+                raw_response = player_assistant.ask(role_action_command_for_current_player)
+                resoponse_to_all = dictionary_role.process_response(raw_response)
+                answer = player_assistant.ask(role_action_command_for_current_player)
+
+                current_player.current_offset = new_offset
+        else:
+            print("Well, you messed up something is the code of the forming role map very badly if you are seeing this")
+
 
 
 def delete_assistants_from_openai_and_game_from_redis(game_id: str):
