@@ -2,6 +2,9 @@
 
 <img src="images/mafia-logo.png" width="600">
 
+:exclamation: **This project is discontinued:** I switched to the [Werewolf AI Party Game](https://github.com/hiper2d/werewolf-ai-party-game) repo. The key difference is that `Mafia-GPT` uses OpenAI Assistants API while the `Werewolf AI Party Game` is based on a pure Completion API. The latter gives me flexibility to switch between models (GPT-4, Claude3 Opus, Grok for now) but forced to store the chat history in DynamoDB. Maybe one day I decide to return to Assistant API and resurrect this repo.
+
+
 I'm building the [Mafia party-game](https://en.wikipedia.org/wiki/Mafia_(party_game)) with AI bots. There is no UI yet,
 it's a console version. It looks like this:
 

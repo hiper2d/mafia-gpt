@@ -5,7 +5,7 @@ import logging.handlers
 import random
 import uuid
 from collections import Counter, defaultdict
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Optional
 
 from dotenv import load_dotenv, find_dotenv
 
@@ -15,7 +15,7 @@ from api.ai.assistant_prompts import GAME_MASTER_VOTING_FIRST_ROUND_COMMAND, GAM
     GAME_MASTER_VOTING_SECOND_ROUND_RESULT
 from api.ai.assistants import ArbiterAssistantDecorator, PlayerAssistantDecorator, RawAssistant
 from api.ai.text_generators import generate_scene_and_players, generate_human_player
-from api.models import Game, ArbiterReply, VotingResponse, MafiaRole, HumanPlayer, role_order_map, BotPlayer
+from api.models import Game, ArbiterReply, VotingResponse, MafiaRole, HumanPlayer, BotPlayer
 from api.redis.redis_helper import connect_to_redis, save_game_to_redis, load_game_from_redis, \
     add_message_to_game_history_redis_list, delete_game_history_redis_list, read_messages_from_game_history_redis_list, \
     delete_game_from_redis, read_newest_game_from_redis

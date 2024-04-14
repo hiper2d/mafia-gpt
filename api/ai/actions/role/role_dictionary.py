@@ -20,9 +20,14 @@ class RoleDto(ABC):
 
     @abstractmethod
     def process_response(self, response_str: str) -> str:
+        pass
+
+
+class DoctorDto(RoleDto):
+    def process_response(self, response_str: str) -> str:
         response_json = {
             "player_to_save": "John",
-            "reason": "I don't trust"
+            "reason": "I believe this player is not a mafia. I believe Mafia might try to eliminate the player tonight"
         }
         # todo: create this json from response_str
         # log the response with DEBUG
@@ -34,11 +39,6 @@ class RoleDto(ABC):
         # Based on this mapping I need to generate a message for everybody based on what happened
         # I should also know who has been eliminated and update assistant instructions
         return self.game_message_to_everybody
-
-
-class DoctorDto(RoleDto):
-    def process_response(self, response_str: str) -> str:
-
 
     def get_command(self) -> str:
         return GAME_MASTER_NIGHT_DOCTOR_COMMAND  # ask to return a name and a reason (for debugging)
